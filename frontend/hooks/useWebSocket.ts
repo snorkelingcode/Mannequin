@@ -41,20 +41,32 @@ export function useWebSocket(url: string): UseWebSocketReturn {
       
       // Get authentication token
       if (!authTokenRef.current) {
+        console.log('Fetching auth token from /api/auth...')
         const response = await fetch('/api/auth', { method: 'POST' })
-        const { token } = await response.json()
-        authTokenRef.current = token
+        if (!response.ok) {
+          throw new Error(`Auth failed: ${response.status} ${response.statusText}`)
+        }
+        const data = await response.json()
+        console.log('Auth response:', data)
+        if (!data.token) {
+          throw new Error('No token received from auth endpoint')
+        }
+        authTokenRef.current = data.token
+        console.log('Auth token obtained successfully')
       }
       
+      console.log('Connecting to WebSocket:', url)
       const ws = new WebSocket(url)
       wsRef.current = ws
       
       ws.onopen = () => {
+        console.log('WebSocket connected successfully')
         setIsConnected(true)
         setConnectionStatus('Connected')
         
         // Authenticate immediately after connection
         if (authTokenRef.current) {
+          console.log('Sending authentication token...')
           ws.send(JSON.stringify({
             type: 'auth',
             token: authTokenRef.current
@@ -72,6 +84,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
               break
               
             case 'auth_success':
+              console.log('Authentication successful!')
               setIsAuthenticated(true)
               setConnectionStatus('Authenticated & Ready')
               break
@@ -145,12 +158,17 @@ export function useWebSocket(url: string): UseWebSocketReturn {
   }, [])
   
   const sendCommand = useCallback(async (command: string): Promise<boolean> => {
+    console.log('Attempting to send command:', command)
+    console.log('Connection state - Connected:', isConnected, 'Authenticated:', isAuthenticated)
+    
     if (!wsRef.current || !isConnected || !isAuthenticated) {
+      console.error('Cannot send command - not connected or authenticated')
       setError('Not connected or authenticated')
       return false
     }
     
     try {
+      console.log('Sending command to WebSocket:', command)
       wsRef.current.send(JSON.stringify({
         type: 'command',
         command: command
@@ -158,6 +176,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
       
       return true
     } catch (err) {
+      console.error('Failed to send command:', err)
       setError(`Failed to send command: ${err}`)
       return false
     }
