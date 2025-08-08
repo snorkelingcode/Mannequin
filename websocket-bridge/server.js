@@ -56,6 +56,10 @@ let connectionCount = 0;
 
 // Create Express app for health checks
 const app = express();
+
+// Trust proxy for Railway deployment
+app.set('trust proxy', true);
+
 app.use(cors({
     origin: CONFIG.ALLOWED_ORIGINS,
     credentials: true
