@@ -151,9 +151,14 @@ async function sendToUnrealEngine(command) {
     });
 }
 
-// WebSocket server
+// Start HTTP server first
+const httpServer = app.listen(CONFIG.WEBSOCKET_PORT, '0.0.0.0', () => {
+    console.log(`HTTP server running on port ${CONFIG.WEBSOCKET_PORT}`);
+});
+
+// WebSocket server runs on top of HTTP server
 const wss = new WebSocket.Server({
-    port: CONFIG.WEBSOCKET_PORT,
+    server: httpServer,  // Use the existing HTTP server
     verifyClient: (info) => {
         // Check origin
         const origin = info.origin;
@@ -334,10 +339,7 @@ setInterval(() => {
     }
 }, 60000); // Check every minute
 
-// Start servers - use the same port for both HTTP and WebSocket
-const httpServer = app.listen(CONFIG.WEBSOCKET_PORT, '0.0.0.0', () => {
-    console.log(`HTTP server running on port ${CONFIG.WEBSOCKET_PORT}`);
-});
+// HTTP server already started above with WebSocket server
 
 console.log(`🚀 Secure WebSocket Bridge Server Started`);
 console.log(`WebSocket Server: ws://localhost:${CONFIG.WEBSOCKET_PORT}`);
