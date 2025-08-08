@@ -8,7 +8,7 @@ require('dotenv').config();
 
 // Security configuration
 const CONFIG = {
-    WEBSOCKET_PORT: process.env.WEBSOCKET_PORT || 8080,
+    WEBSOCKET_PORT: process.env.PORT || process.env.WEBSOCKET_PORT || 8080,
     TCP_HOST: process.env.TCP_HOST || '127.0.0.1',
     TCP_PORT: process.env.TCP_PORT || 7777,
     ALLOWED_ORIGINS: (process.env.ALLOWED_ORIGINS || 'https://mannequin.vercel.app,http://localhost:3000').split(','),
@@ -334,14 +334,14 @@ setInterval(() => {
     }
 }, 60000); // Check every minute
 
-// Start servers
-const httpServer = app.listen(3001, () => {
-    console.log(`HTTP server running on port 3001`);
+// Start servers - use the same port for both HTTP and WebSocket
+const httpServer = app.listen(CONFIG.WEBSOCKET_PORT, '0.0.0.0', () => {
+    console.log(`HTTP server running on port ${CONFIG.WEBSOCKET_PORT}`);
 });
 
 console.log(`🚀 Secure WebSocket Bridge Server Started`);
 console.log(`WebSocket Server: ws://localhost:${CONFIG.WEBSOCKET_PORT}`);
-console.log(`HTTP Server: http://localhost:3001`);
+console.log(`HTTP Server: http://localhost:${CONFIG.WEBSOCKET_PORT}`);
 console.log(`Target TCP: ${CONFIG.TCP_HOST}:${CONFIG.TCP_PORT}`);
 console.log(`Allowed Origins: ${CONFIG.ALLOWED_ORIGINS.join(', ')}`);
 console.log(`Max Connections: ${CONFIG.MAX_CONNECTIONS}`);
