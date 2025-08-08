@@ -21,7 +21,7 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
   const [statusMessage, setStatusMessage] = useState('Ready to connect')
   
   const videoRef = useRef<HTMLVideoElement>(null)
-  const hlsRef = useRef<Hls | null>(null)
+  const hlsRef = useRef<any>(null)
   const webrtcRef = useRef<RTCPeerConnection | null>(null)
   
   const updateStatus = (newStatus: StreamStatus, message: string) => {
