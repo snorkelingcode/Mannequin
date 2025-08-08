@@ -8,6 +8,8 @@ interface LivepeerPlayerProps {
 
 const STREAM_CONFIG = {
   PLAYBACK_ID: '7de0lr18mu0sassl',
+  // Connect to your local WebRTC bridge instead of direct Livepeer
+  LOCAL_WEBRTC_URL: 'ws://localhost:5000', // Your WebRTC bridge UDP->WebSocket
   HLS_URL: 'https://livepeercdn.studio/hls/7de0lr18mu0sassl/index.m3u8',
   WEBRTC_URL: 'https://livepeer.studio/webrtc/7de0lr18mu0sassl'
 }
@@ -31,13 +33,44 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
   
   const startWebRTCStream = async () => {
     try {
-      updateStatus('connecting', 'Connecting to WebRTC stream...')
+      updateStatus('connecting', 'Connecting to local WebRTC bridge...')
       
-      // For now, fallback to HLS since WebRTC requires more complex setup
-      // In production, this would use WHEP protocol
-      console.log('WebRTC URL:', STREAM_CONFIG.WEBRTC_URL)
-      updateStatus('error', 'WebRTC not yet implemented - falling back to HLS')
-      await startHLSStream()
+      if (!videoRef.current) {
+        throw new Error('Video element not available')
+      }
+      
+      // Connect to your local WebRTC bridge that receives UDP from Unreal Engine
+      const ws = new WebSocket(STREAM_CONFIG.LOCAL_WEBRTC_URL)
+      
+      ws.onopen = () => {
+        updateStatus('connected', 'Connected to WebRTC bridge - Waiting for stream')
+        console.log('Connected to local WebRTC bridge')
+      }
+      
+      ws.onmessage = (event) => {
+        // Handle video frames from your WebRTC bridge
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'video_frame') {
+            // Process video frame data from your bridge
+            console.log('Received video frame from bridge')
+          }
+        } catch (e) {
+          // Binary video data - handle raw frames
+          console.log('Received binary video data')
+        }
+      }
+      
+      ws.onerror = (error) => {
+        console.error('WebRTC bridge connection failed:', error)
+        updateStatus('error', 'WebRTC bridge connection failed - falling back to HLS')
+        ws.close()
+        await startHLSStream()
+      }
+      
+      ws.onclose = () => {
+        updateStatus('disconnected', 'WebRTC bridge connection closed')
+      }
       
     } catch (error) {
       console.error('WebRTC connection failed:', error)
