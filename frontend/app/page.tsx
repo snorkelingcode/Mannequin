@@ -53,58 +53,6 @@ export default function Home() {
           </div>
         )}
         
-        <div className="mb-6 card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className={`flex items-center space-x-2 px-3 py-2 rounded-full ${
-                isConnected ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${
-                  isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'
-                }`}></div>
-                <span className="text-sm font-medium">{connectionStatus}</span>
-              </div>
-              
-              {isConnected && (
-                <div className={`flex items-center space-x-2 px-3 py-2 rounded-full ${
-                  isAuthenticated ? 'bg-blue-500/20 text-blue-400' : 'bg-yellow-500/20 text-yellow-400'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${
-                    isAuthenticated ? 'bg-blue-400' : 'bg-yellow-400 animate-pulse'
-                  }`}></div>
-                  <span className="text-sm font-medium">
-                    {isAuthenticated ? 'Authenticated' : 'Authenticating...'}
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowControls(!showControls)}
-                className="btn-secondary px-4 py-2 text-sm"
-              >
-                {showControls ? '🎮 Hide Controls' : '🎮 Show Controls'}
-              </button>
-              
-              {isConnected ? (
-                <button
-                  onClick={disconnect}
-                  className="btn-secondary px-4 py-2 text-sm"
-                >
-                  🔌 Disconnect
-                </button>
-              ) : (
-                <button
-                  onClick={connect}
-                  className="btn-primary px-4 py-2 text-sm"
-                >
-                  🔌 Connect
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
         
         {/* Main Layout */}
         <div className={`grid gap-6 ${showControls ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} transition-all duration-300`}>
@@ -112,21 +60,6 @@ export default function Home() {
           <div className={`${showControls ? '' : 'lg:col-span-1 max-w-4xl mx-auto'}`}>
             <LivepeerPlayer className="h-full" />
             
-            {/* Stream Pipeline Info */}
-            <div className="mt-4 card">
-              <h3 className="text-lg font-semibold text-primary-400 mb-3">🔄 Stream Pipeline</h3>
-              <div className="flex items-center justify-center space-x-2 text-sm">
-                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">End User</span>
-                <span className="text-dark-400">→</span>
-                <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded">Vercel App</span>
-                <span className="text-dark-400">→</span>
-                <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">WebSocket Bridge</span>
-                <span className="text-dark-400">→</span>
-                <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded">Unreal Engine</span>
-                <span className="text-dark-400">→</span>
-                <span className="px-2 py-1 bg-primary-500/20 text-primary-400 rounded">Livepeer Stream</span>
-              </div>
-            </div>
           </div>
           
           {/* Controls Panel - Hide when showControls is false */}

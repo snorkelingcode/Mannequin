@@ -51,19 +51,6 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
         <div><strong>Latency:</strong> Ultra-low via WebRTC/HLS adaptive</div>
       </div>
       
-      {/* Stream Pipeline Info */}
-      <div className="mt-4 p-4 bg-dark-700/30 rounded-lg">
-        <h4 className="text-sm font-semibold text-primary-400 mb-2">🔄 Stream Pipeline</h4>
-        <div className="flex items-center justify-center space-x-2 text-xs">
-          <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded">Unreal Engine</span>
-          <span className="text-dark-400">→</span>
-          <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded">WebRTC Bridge</span>
-          <span className="text-dark-400">→</span>
-          <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded">Livepeer</span>
-          <span className="text-dark-400">→</span>
-          <span className="px-2 py-1 bg-primary-500/20 text-primary-400 rounded">Your Browser</span>
-        </div>
-      </div>
     </div>
   )
 }
