@@ -1,0 +1,9 @@
+# Minimal dependencies for stable RTMP bridge
+# The current bridge only needs standard Python libraries + FFmpeg
+
+# FFmpeg must be installed and available in PATH
+# No additional Python packages required for current stable version
+
+# Future: If color correction is re-added later:
+# numpy>=1.24.0
+# Pillow>=10.0.0

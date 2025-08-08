@@ -1,0 +1,3011 @@
+Server Side SDKS for Python 
+Python
+Learn how to create your first stream using the Livepeer Python SDK.
+
+1
+Prerequisites
+
+To get the most out of this guide, you’ll need to:
+Create an API key
+2
+Install the SDK
+
+Get the Livepeer Python SDK.
+
+Copy
+
+Ask AI
+pip install git+https://github.com/livepeer/livepeer-python.git
+3
+Initialize the SDK
+
+The first step is to initialize the SDK with your Livepeer Studio API key.
+
+Copy
+
+Ask AI
+import livepeer
+from livepeer.models import components
+
+lpClient = livepeer.Livepeer(
+    api_key="<YOUR_BEARER_TOKEN_HERE>",
+)
+4
+Use the SDK
+
+Now that you have the SDK installed and initialized, you can use it in your app. Let’s create a stream.
+
+Copy
+
+Ask AI
+import livepeer
+from livepeer.models import components
+
+lpClient = livepeer.Livepeer(
+    api_key="<YOUR_BEARER_TOKEN_HERE>",
+)
+
+req = components.NewStreamPayload(
+    name='test_stream',
+)
+
+res = s.stream.create(req)
+
+if res.stream is not None:
+    # handle response
+    pass
+5
+Try it yourself
+
+Python Example
+See an example on GitHub.
+​
+Next steps
+Checkout Livepeer API Reference to learn more about the Livepeer API and the Javascript SDK.
+
+Introduction
+Learn more about Livepeer’s API.
+
+Welcome to the Livepeer API reference docs! Here you’ll find all the endpoints exposed on the standard Livepeer API, learn how to use them and what they return.
+The Livepeer API is organized around REST, has predictable resource-oriented URLs, accepts JSON request bodies, returns JSON-encoded responses, and uses standard HTTP response codes, authentication, and verbs.
+
+Authentication
+Learn more about Livepeer’s API.
+
+Livepeer API uses API keys to verify and authorize requests. You can manage and review your API keys through Livepeer Studio. You need to pass your API key in the Authorization header with a Bearer prefix while sending a request.
+
+Copy
+
+Ask AI
+Bearer YOUR_API_KEY
+It’s important to note that your API keys come with significant privileges, so it’s essential to keep them safe and secure! Refrain from sharing your secret API keys in GitHub or other publicly accessible places.
+By default, API keys can only be used from a backend server. This is to ensure maximum security and prevent that you accidentally expose your account by including the secret API key in a public web page.
+​
+CORS-Enabled Keys
+Please read the below documentation in its entirety before using CORS-enabled API keys. There is a different security model for CORS keys.
+Studio supports the creation of CORS-enabled API keys. This is a special option when generating an API key which allows a webpage to make requests directly to Studio, as opposed to coming from your backend.
+​
+Security with CORS Keys
+The security model is different for CORS-enabled API keys. Since any user has access to these keys, the IDs of assets and streams must be kept secret from anyone who should not have admin control over them. For instance, a viewer should only have access to the playback ID, since knowing the asset ID (together with the CORS-enabled API key, which is embedded in the webpage) allows them to make changes to the asset.
+This is the same for streams - if a user has access to a stream ID alongside the CORS API key, they can modify the stream or view the stream key. If a viewer had access to the stream ID + CORS API key, they could hijack the stream. A playbackId should be exposed to the viewer only.
+
+
+Overview
+The Assets API is used to create, retrieve, update, delete assets object from pipeline.
+
+​
+Asset object
+​
+id
+string
+This is a unique identifier for the asset.
+​
+type
+string
+Type of the asset. This can be either ‘video’ or ‘audio’.
+​
+playbackId
+string
+Used to form playback URL and storage folder.
+​
+staticMp4
+boolean
+Whether to generate MP4s for the asset.
+​
+c2pa
+boolean
+Attach Livepeer Studio C2PA Attestation in the output mp4 video.
+​
+playbackUrl
+string
+URL for HLS playback.
+​
+downloadUrl
+string
+URL to manually download the asset if desired.
+​
+playbackPolicy
+object
+Reference to the playback-policy schema.
+​
+source
+object
+Source of the asset, which can be URL, recording, directUpload, or clip.
+​
+creatorId
+string
+Reference to the creator-id schema.
+​
+storage
+object
+Information about the storage of the asset, particularly on IPFS.
+​
+status
+object
+Status of the asset, including its phase, update time, and any error message.
+​
+name
+string
+Name of the asset. This is not necessarily the filename, can be a custom name or title.
+​
+createdAt
+number
+Timestamp (in milliseconds) at which asset was created.
+​
+size
+number
+Size of the asset in bytes.
+​
+hash
+array
+Hash of the asset.
+​
+videoSpec
+object
+Video metadata including format, duration, bitrate, and tracks information.
+
+Upload an asset
+To upload an asset, your first need to request for a direct upload URL and only then actually upload the contents of the asset.
+
+Once you created a upload link, you have 2 options, resumable or direct upload. For a more reliable experience, you should use resumable uploads which will work better for users with unreliable or slow network connections. If you want a simpler implementation though, you should just use a direct upload.
+
+Direct Upload
+For a direct upload, make a PUT request to the URL received in the url field of the response above, with the raw video file as the request body. response above:
+
+Resumable Upload
+Livepeer supports resumable uploads via Tus. This section provides a simple example of how to use tus-js-client to upload a video file.
+
+From the previous section, we generated a URL to upload a video file to Livepeer on POST /api/asset/request-upload. You should use the tusEndpoint field of the response to upload the video file and track the progress:
+
+# This assumes there is an `input` element of `type="file"` with id
+`fileInput` in the HTML
+
+
+const input = document.getElementById('fileInput');
+
+const file = input.files[0];
+
+const upload = new tus.Upload(file, {
+  endpoint: tusEndpoint, // URL from `tusEndpoint` field in the
+`/request-upload` response
+  metadata: {
+    filename,
+    filetype: 'video/mp4',
+  },
+  uploadSize: file.size,
+  onError(err) {
+    console.error('Error uploading file:', err);
+  },
+  onProgress(bytesUploaded, bytesTotal) {
+    const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
+    console.log('Uploaded ' + percentage + '%');
+  },
+  onSuccess() {
+    console.log('Upload finished:', upload.url);
+  },
+});
+
+const previousUploads = await upload.findPreviousUploads();
+
+if (previousUploads.length > 0) {
+  upload.resumeFromPreviousUpload(previousUploads[0]);
+}
+
+upload.start();
+
+Note: If you are using tus from node.js, you need to add a custom URL storage to enable resuming from previous uploads. On the browser, this is enabled by default using local storage. In node.js, add urlStorage: new tus.FileUrlStorage(“path/to/tmp/file”), to the UploadFile object definition above.
+
+POST
+/
+asset
+/
+request-upload
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Body
+application/json
+​
+name
+stringrequired
+The name of the asset. This is not necessarily the filename - it can be a custom name or title.
+
+Example:
+"filename.mp4"
+
+​
+staticMp4
+boolean
+Whether to generate MP4s for the asset.
+
+Example:
+true
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+creatorId
+
+object
+Show child attributes
+
+​
+storage
+object
+Show child attributes
+
+​
+encryption
+object
+Show child attributes
+
+​
+c2pa
+boolean
+Decides if the output video should include C2PA signature
+
+​
+profiles
+object[] | null
+Show child attributes
+
+​
+targetSegmentSizeSecs
+number
+How many seconds the duration of each output segment should be
+
+Response
+200
+
+200
+application/json
+Success
+
+​
+url
+stringrequired
+The direct upload endpoint for which supports PUT requests. It is recommended to use the Tus endpoint for a better upload experience.
+
+Example:
+"https://origin.livepeer.com/api/asset/upload/direct?token=eyJhbGciOiJIUzI1NiJ9.eyJtc2ciOiJoZWxsbyBoYWNrZXIsIHRoZXJlJ3Mgbm90aGluZyBmb3IgeW91IGhlcmUg8J-YhiJ9.1YDjmXsqLcgNyMSzT4kXl_kIni46_EuGX_xfqmC7e0Q"
+
+​
+tusEndpoint
+stringrequired
+The Tus-compatible endpoint for resumable uploads. This is the recommended way to upload assets. See the Tus-js client for more information.
+
+Example:
+"https://origin.livepeer.com/api/asset/upload/tus?token=eyJhbGciOiJIUzI1NiJ9.eyJtc2ciOiJoZWxsbyBoYWNrZXIsIHRoZXJlJ3Mgbm90aGluZyBmb3IgeW91IGhlcmUg8J-YhiJ9.1YDjmXsqLcgNyMSzT4kXl_kIni46_EuGX_xfqmC7e0Q"
+
+​
+asset
+objectrequired
+Show child attributes
+
+​
+task
+objectrequired
+
+Upload asset via URL
+POST
+/
+asset
+/
+upload
+/
+url
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Body
+application/json
+​
+name
+anyrequired
+​
+url
+string<uri>required
+URL where the asset contents can be retrieved, e.g. https://s3.amazonaws.com/my-bucket/path/filename.mp4.
+For an IPFS source, this should be similar to: ipfs://{CID}. For an Arweave
+source: ar://{CID}.
+
+Example:
+"https://s3.amazonaws.com/my-bucket/path/filename.mp4"
+
+​
+staticMp4
+any
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+creatorId
+
+object
+Show child attributes
+
+​
+storage
+any
+​
+encryption
+any
+​
+c2pa
+any
+​
+profiles
+any
+​
+targetSegmentSizeSecs
+any
+Response
+200
+
+200
+application/json
+Upload in progress
+
+​
+asset
+objectrequired
+Hide child attributes
+
+​
+asset.id
+stringrequired
+Example:
+"09F8B46C-61A0-4254-9875-F71F4C605BC7"
+
+​
+asset.source
+objectrequired
+Option 1
+Option 2
+Option 3
+Show child attributes
+
+​
+asset.name
+stringrequired
+The name of the asset. This is not necessarily the filename - it can be a custom name or title.
+
+Example:
+"filename.mp4"
+
+​
+asset.type
+enum<string>
+Type of the asset.
+
+Available options: video, audio 
+Example:
+"video"
+
+​
+asset.playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+asset.userId
+stringdeprecated
+Example:
+"66E2161C-7670-4D05-B71D-DA2D6979556F"
+
+​
+asset.playbackUrl
+string
+URL for HLS playback. It is recommended to not use this URL, and instead use playback IDs with the Playback Info endpoint to retrieve the playback URLs - this URL format is subject to change (e.g. https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8).
+
+Example:
+"https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8"
+
+​
+asset.downloadUrl
+string
+The URL to directly download the asset, e.g. https://livepeercdn.com/asset/eawrrk06ts2d0mzb/video. It is not recommended to use this for playback.
+
+Example:
+"https://livepeercdn.com/asset/eaw4nk06ts2d0mzb/video/download.mp4"
+
+​
+asset.playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+asset.creatorId
+object
+Show child attributes
+
+​
+asset.profiles
+object[]
+Requested profiles for the asset to be transcoded into. Configured
+on the upload APIs payload or through the stream.recordingSpec
+field for recordings. If not specified, default profiles are derived
+based on the source input. If this is a recording, the source will
+not be present in this list but will be available for playback.
+
+Show child attributes
+
+​
+asset.storage
+object
+Show child attributes
+
+​
+asset.status
+object
+Status of the asset
+
+Show child attributes
+
+​
+asset.projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+asset.createdAt
+number
+Timestamp (in milliseconds) at which asset was created
+
+Example:
+1587667174725
+
+​
+asset.createdByTokenName
+string
+Name of the token used to create this object
+
+​
+asset.size
+number
+Size of the asset in bytes
+
+Example:
+84934509
+
+​
+asset.hash
+object[] | null
+Hash of the asset
+
+Show child attributes
+
+​
+asset.videoSpec
+object
+Video metadata
+
+Show child attributes
+
+​
+task
+objectrequired
+Hide child attributes
+
+​
+task.id
+stringrequired
+Example:
+"34d7618e-fd42-4798-acf5-19504616a11e"
+
+Asset
+Retrieve an asset
+GET
+/
+asset
+/
+{assetId}
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+assetId
+stringrequired
+ID of the asset
+
+Response
+200
+
+200
+application/json
+Success
+
+​
+id
+stringrequired
+Example:
+"09F8B46C-61A0-4254-9875-F71F4C605BC7"
+
+​
+source
+objectrequired
+Option 1
+Option 2
+Option 3
+Show child attributes
+
+​
+name
+stringrequired
+The name of the asset. This is not necessarily the filename - it can be a custom name or title.
+
+Example:
+"filename.mp4"
+
+​
+type
+enum<string>
+Type of the asset.
+
+Available options: video, audio 
+Example:
+"video"
+
+​
+playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+userId
+stringdeprecated
+Example:
+"66E2161C-7670-4D05-B71D-DA2D6979556F"
+
+​
+playbackUrl
+string
+URL for HLS playback. It is recommended to not use this URL, and instead use playback IDs with the Playback Info endpoint to retrieve the playback URLs - this URL format is subject to change (e.g. https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8).
+
+Example:
+"https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8"
+
+​
+downloadUrl
+string
+The URL to directly download the asset, e.g. https://livepeercdn.com/asset/eawrrk06ts2d0mzb/video. It is not recommended to use this for playback.
+
+Example:
+"https://livepeercdn.com/asset/eaw4nk06ts2d0mzb/video/download.mp4"
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+creatorId
+object
+Show child attributes
+
+​
+profiles
+object[]
+Requested profiles for the asset to be transcoded into. Configured
+on the upload APIs payload or through the stream.recordingSpec
+field for recordings. If not specified, default profiles are derived
+based on the source input. If this is a recording, the source will
+not be present in this list but will be available for playback.
+
+Show child attributes
+
+​
+storage
+object
+Show child attributes
+
+​
+status
+object
+Status of the asset
+
+Show child attributes
+
+​
+projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+createdAt
+number
+Timestamp (in milliseconds) at which asset was created
+
+Example:
+1587667174725
+
+​
+createdByTokenName
+string
+Name of the token used to create this object
+
+​
+size
+number
+Size of the asset in bytes
+
+Example:
+84934509
+
+​
+hash
+object[] | null
+Hash of the asset
+
+Show child attributes
+
+​
+videoSpec
+object
+Video metadata
+
+Show child attributes
+
+Update an asset
+PATCH
+/
+asset
+/
+{assetId}
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+assetId
+stringrequired
+ID of the asset
+
+Body
+application/json
+​
+name
+any
+​
+creatorId
+
+object
+Show child attributes
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+storage
+any
+Response
+200
+
+200
+application/json
+Success
+
+​
+id
+stringrequired
+Example:
+"09F8B46C-61A0-4254-9875-F71F4C605BC7"
+
+​
+source
+objectrequired
+Option 1
+Option 2
+Option 3
+Show child attributes
+
+​
+name
+stringrequired
+The name of the asset. This is not necessarily the filename - it can be a custom name or title.
+
+Example:
+"filename.mp4"
+
+​
+type
+enum<string>
+Type of the asset.
+
+Available options: video, audio 
+Example:
+"video"
+
+​
+playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+userId
+stringdeprecated
+Example:
+"66E2161C-7670-4D05-B71D-DA2D6979556F"
+
+​
+playbackUrl
+string
+URL for HLS playback. It is recommended to not use this URL, and instead use playback IDs with the Playback Info endpoint to retrieve the playback URLs - this URL format is subject to change (e.g. https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8).
+
+Example:
+"https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8"
+
+​
+downloadUrl
+string
+The URL to directly download the asset, e.g. https://livepeercdn.com/asset/eawrrk06ts2d0mzb/video. It is not recommended to use this for playback.
+
+Example:
+"https://livepeercdn.com/asset/eaw4nk06ts2d0mzb/video/download.mp4"
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+creatorId
+object
+Show child attributes
+
+​
+profiles
+object[]
+Requested profiles for the asset to be transcoded into. Configured
+on the upload APIs payload or through the stream.recordingSpec
+field for recordings. If not specified, default profiles are derived
+based on the source input. If this is a recording, the source will
+not be present in this list but will be available for playback.
+
+Show child attributes
+
+​
+storage
+object
+Show child attributes
+
+​
+status
+object
+Status of the asset
+
+Show child attributes
+
+​
+projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+createdAt
+number
+Timestamp (in milliseconds) at which asset was created
+
+Example:
+1587667174725
+
+​
+createdByTokenName
+string
+Name of the token used to create this object
+
+​
+size
+number
+Size of the asset in bytes
+
+Example:
+84934509
+
+​
+hash
+object[] | null
+Hash of the asset
+
+Show child attributes
+
+​
+videoSpec
+object
+Video metadata
+
+Show child attributes
+
+Delete an asset
+DELETE
+/
+asset
+/
+{assetId}
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+assetId
+stringrequired
+ID of the asset
+
+Response
+204
+
+204
+Success (No content)
+
+Retrieve assets
+GET
+/
+asset
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Response
+200
+
+200
+application/json
+Success
+
+​
+id
+stringrequired
+Example:
+"09F8B46C-61A0-4254-9875-F71F4C605BC7"
+
+​
+source
+objectrequired
+Option 1
+Option 2
+Option 3
+Show child attributes
+
+​
+name
+stringrequired
+The name of the asset. This is not necessarily the filename - it can be a custom name or title.
+
+Example:
+"filename.mp4"
+
+​
+type
+enum<string>
+Type of the asset.
+
+Available options: video, audio 
+Example:
+"video"
+
+​
+playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+userId
+stringdeprecated
+Example:
+"66E2161C-7670-4D05-B71D-DA2D6979556F"
+
+​
+playbackUrl
+string
+URL for HLS playback. It is recommended to not use this URL, and instead use playback IDs with the Playback Info endpoint to retrieve the playback URLs - this URL format is subject to change (e.g. https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8).
+
+Example:
+"https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8"
+
+​
+downloadUrl
+string
+The URL to directly download the asset, e.g. https://livepeercdn.com/asset/eawrrk06ts2d0mzb/video. It is not recommended to use this for playback.
+
+Example:
+"https://livepeercdn.com/asset/eaw4nk06ts2d0mzb/video/download.mp4"
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+creatorId
+object
+Show child attributes
+
+​
+profiles
+object[]
+Requested profiles for the asset to be transcoded into. Configured
+on the upload APIs payload or through the stream.recordingSpec
+field for recordings. If not specified, default profiles are derived
+based on the source input. If this is a recording, the source will
+not be present in this list but will be available for playback.
+
+Show child attributes
+
+​
+storage
+object
+Show child attributes
+
+​
+status
+object
+Status of the asset
+
+Show child attributes
+
+​
+projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+createdAt
+number
+Timestamp (in milliseconds) at which asset was created
+
+Example:
+1587667174725
+
+​
+createdByTokenName
+string
+Name of the token used to create this object
+
+​
+size
+number
+Size of the asset in bytes
+
+Example:
+84934509
+
+​
+hash
+object[] | null
+Hash of the asset
+
+Show child attributes
+
+​
+videoSpec
+object
+Video metadata
+
+Show child attributes
+
+Overview
+The Livestream API is used to create, retrieve, update, delete stream object from pipeline.
+
+​
+Stream Object
+​
+id
+string
+Unique identifier for the stream.
+​
+name
+string
+Name of the stream.
+​
+creatorId
+string
+Reference to the creator-id schema.
+​
+lastSeen
+number
+Timestamp of the last activity on the stream.
+​
+sourceSegments
+number
+Number of source segments.
+​
+transcodedSegments
+number
+Number of transcoded segments.
+​
+sourceSegmentsDuration
+number
+Duration of all the source segments in seconds.
+​
+transcodedSegmentsDuration
+number
+Duration of all the transcoded segments in seconds.
+​
+sourceBytes
+number
+Total bytes of source segments.
+​
+transcodedBytes
+number
+Total bytes of transcoded segments.
+​
+ingestRate
+number
+Rate at which sourceBytes increases (bytes/second).
+​
+outgoingRate
+number
+Rate at which transcodedBytes increases (bytes/second).
+​
+isActive
+boolean
+Indicates if the stream is currently active.
+​
+isHealthy
+object
+Reference to the stream-health-payload schema for health status.
+​
+issues
+object
+Reference to the stream-health-payload schema for human-readable issues.
+​
+createdByTokenName
+string
+Name of the token used to create this stream.
+​
+createdAt
+number
+Timestamp (in milliseconds) of when the stream object was created.
+​
+parentId
+string
+Identifier for the parent stream object.
+​
+streamKey
+string
+Key used to form the RTMP ingest URL.
+​
+playbackId
+string
+Identifier used to form the playback URL.
+​
+playbackPolicy
+object
+Reference to the playback-policy schema.
+​
+profiles
+array
+Array of profiles detailing various streaming qualities.
+​
+record
+boolean
+Indicates if the stream should be recorded.
+​
+multistream
+object
+Details about multistreaming targets and their configurations.
+​
+suspended
+boolean
+Indicates if the stream is currently suspended.
+Create a livestream
+The only parameter you are required to set is the name of your stream, but we also highly recommend that you define transcoding profiles parameter that suits your specific broadcasting configuration.
+
+If you do not define transcoding rendition profiles when creating the stream, a default set of profiles will be used. These profiles include 240p, 360p, 480p and 720p.
+
+The playback policy is set to public by default for new streams. It can also be added upon the creation of a new stream by adding "playbackPolicy": {"type": "jwt"}
+
+POST
+/
+stream
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Body
+application/json
+​
+name
+anyrequired
+​
+pull
+any
+​
+creatorId
+
+object
+Show child attributes
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+profiles
+object[] | null
+Show child attributes
+
+​
+record
+any
+​
+recordingSpec
+object
+Show child attributes
+
+​
+multistream
+any
+​
+userTags
+any
+Response
+201
+
+201
+application/json
+Success
+
+​
+name
+stringrequired
+Example:
+"test_stream"
+
+​
+id
+string
+Example:
+"de7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+kind
+stringdeprecated
+Example:
+"stream"
+
+​
+creatorId
+object
+Show child attributes
+
+​
+userTags
+object
+User input tags associated with the stream
+
+Show child attributes
+
+​
+lastSeen
+number
+Example:
+1587667174725
+
+​
+sourceSegments
+number
+Example:
+1
+
+​
+transcodedSegments
+number
+Example:
+2
+
+​
+sourceSegmentsDuration
+number
+Duration of all the source segments, sec
+
+Example:
+1
+
+​
+transcodedSegmentsDuration
+number
+Duration of all the transcoded segments, sec
+
+Example:
+2
+
+​
+sourceBytes
+number
+Example:
+1
+
+​
+transcodedBytes
+number
+Example:
+2
+
+​
+ingestRate
+number
+Rate at which sourceBytes increases (bytes/second)
+
+Example:
+1
+
+​
+outgoingRate
+number
+Rate at which transcodedBytes increases (bytes/second)
+
+Example:
+2
+
+​
+isActive
+boolean
+If currently active
+
+Example:
+true
+
+​
+isHealthy
+any
+​
+issues
+any
+​
+createdByTokenName
+string
+Name of the token used to create this object
+
+Example:
+"abc-123-xyz-456"
+
+​
+createdAt
+number
+Timestamp (in milliseconds) at which stream object was created
+
+Example:
+1587667174725
+
+​
+parentId
+string
+Points to parent stream object
+
+Example:
+"de7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+streamKey
+string
+Used to form RTMP ingest URL
+
+Example:
+"hgebdhhigq"
+
+​
+pull
+object
+Configuration for a stream that should be actively pulled from an
+external source, rather than pushed to Livepeer. If specified, the
+stream will not have a streamKey.
+
+Show child attributes
+
+​
+playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+profiles
+object[]
+Profiles to transcode the stream into. If not specified, a default
+set of profiles will be used with 240p, 360p, 480p and 720p
+resolutions. Keep in mind that the source rendition is always kept.
+
+Show child attributes
+
+​
+projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+record
+boolean
+Should this stream be recorded? Uses default settings. For more
+customization, create and configure an object store.
+
+Example:
+false
+
+​
+recordingSpec
+object
+Configuration for recording the stream. This can only be set if
+record is true.
+
+Show child attributes
+
+​
+multistream
+object
+Show child attributes
+
+​
+suspended
+boolean
+If currently suspended
+
+​
+lastTerminatedAt
+number | null
+Timestamp (in milliseconds) when the stream was last terminated
+
+Example:
+1713281212993
+
+​
+userId
+stringdeprecated
+Example:
+"we7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+renditions
+object
+
+Retrieve a livestream
+GET
+/
+stream
+/
+{id}
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+id
+stringrequired
+ID of the stream
+
+Response
+200
+
+200
+application/json
+Success
+
+​
+name
+stringrequired
+Example:
+"test_stream"
+
+​
+id
+string
+Example:
+"de7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+kind
+stringdeprecated
+Example:
+"stream"
+
+​
+creatorId
+object
+Show child attributes
+
+​
+userTags
+object
+User input tags associated with the stream
+
+Show child attributes
+
+​
+lastSeen
+number
+Example:
+1587667174725
+
+​
+sourceSegments
+number
+Example:
+1
+
+​
+transcodedSegments
+number
+Example:
+2
+
+​
+sourceSegmentsDuration
+number
+Duration of all the source segments, sec
+
+Example:
+1
+
+​
+transcodedSegmentsDuration
+number
+Duration of all the transcoded segments, sec
+
+Example:
+2
+
+​
+sourceBytes
+number
+Example:
+1
+
+​
+transcodedBytes
+number
+Example:
+2
+
+​
+ingestRate
+number
+Rate at which sourceBytes increases (bytes/second)
+
+Example:
+1
+
+​
+outgoingRate
+number
+Rate at which transcodedBytes increases (bytes/second)
+
+Example:
+2
+
+​
+isActive
+boolean
+If currently active
+
+Example:
+true
+
+​
+isHealthy
+any
+​
+issues
+any
+​
+createdByTokenName
+string
+Name of the token used to create this object
+
+Example:
+"abc-123-xyz-456"
+
+​
+createdAt
+number
+Timestamp (in milliseconds) at which stream object was created
+
+Example:
+1587667174725
+
+​
+parentId
+string
+Points to parent stream object
+
+Example:
+"de7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+streamKey
+string
+Used to form RTMP ingest URL
+
+Example:
+"hgebdhhigq"
+
+​
+pull
+object
+Configuration for a stream that should be actively pulled from an
+external source, rather than pushed to Livepeer. If specified, the
+stream will not have a streamKey.
+
+Show child attributes
+
+​
+playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+profiles
+object[]
+Profiles to transcode the stream into. If not specified, a default
+set of profiles will be used with 240p, 360p, 480p and 720p
+resolutions. Keep in mind that the source rendition is always kept.
+
+Show child attributes
+
+​
+projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+record
+boolean
+Should this stream be recorded? Uses default settings. For more
+customization, create and configure an object store.
+
+Example:
+false
+
+​
+recordingSpec
+object
+Configuration for recording the stream. This can only be set if
+record is true.
+
+Show child attributes
+
+​
+multistream
+object
+Show child attributes
+
+​
+suspended
+boolean
+If currently suspended
+
+​
+lastTerminatedAt
+number | null
+Timestamp (in milliseconds) when the stream was last terminated
+
+Example:
+1713281212993
+
+​
+userId
+stringdeprecated
+Example:
+"we7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+renditions
+object
+
+Update a livestream
+PATCH
+/
+stream
+/
+{id}
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+id
+stringrequired
+ID of the stream
+
+Body
+application/json
+​
+creatorId
+
+object
+Show child attributes
+
+​
+record
+any
+​
+suspended
+any
+​
+multistream
+any
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+profiles
+any
+​
+recordingSpec
+any
+​
+userTags
+any
+​
+name
+any
+Response
+204
+
+204
+Success
+
+Terminates a livestream
+DELETE /stream/{id}/terminate can be used to terminate an ongoing session on a live stream. Unlike suspending the stream, it allows the streamer to restart streaming even immediately, but it will force terminate the current session and stop the recording.
+
+A 204 No Content status response indicates the stream was successfully terminated.
+
+DELETE
+/
+stream
+/
+{id}
+/
+terminate
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+id
+stringrequired
+ID of the stream
+
+Response
+204
+
+204
+Success
+
+Add a multistream target
+POST
+/
+stream
+/
+{id}
+/
+create-multistream-target
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+id
+stringrequired
+ID of the parent stream
+
+Body
+application/json
+​
+profile
+stringrequired
+Name of transcoding profile that should be sent. Use
+"source" for pushing source stream data
+
+Required string length: 1 - 500
+Example:
+"720p0"
+
+​
+videoOnly
+booleandefault:false
+If true, the stream audio will be muted and only silent
+video will be pushed to the target.
+
+Example:
+false
+
+​
+id
+string
+ID of multistream target object where to push this stream
+
+Example:
+"PUSH123"
+
+​
+spec
+object
+Inline multistream target object. Will automatically
+create the target resource to be used by the created
+stream.
+
+Show child attributes
+
+Response
+204
+
+204
+Success (No content)
+
+Remove a multistream target
+DELETE
+/
+stream
+/
+{id}
+/
+multistream
+/
+{targetId}
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+id
+stringrequired
+ID of the parent stream
+
+​
+targetId
+stringrequired
+ID of the multistream target
+
+Response
+204
+
+204
+Success (No content)
+
+Delete a livestream
+This will also suspend any active stream sessions, so make sure to wait until the stream has finished. To explicitly interrupt an active session, consider instead updating the suspended field in the stream using the PATCH stream API.
+
+DELETE
+/
+stream
+/
+{id}
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+id
+stringrequired
+ID of the stream
+
+Response
+204
+
+204
+Success (No content)
+
+Retrieve all livestreams
+GET
+/
+stream
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Query Parameters
+​
+streamsonly
+string
+Response
+200
+
+200
+application/json
+Success
+
+​
+name
+stringrequired
+Example:
+"test_stream"
+
+​
+id
+string
+Example:
+"de7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+kind
+stringdeprecated
+Example:
+"stream"
+
+​
+creatorId
+object
+Show child attributes
+
+​
+userTags
+object
+User input tags associated with the stream
+
+Show child attributes
+
+​
+lastSeen
+number
+Example:
+1587667174725
+
+​
+sourceSegments
+number
+Example:
+1
+
+​
+transcodedSegments
+number
+Example:
+2
+
+​
+sourceSegmentsDuration
+number
+Duration of all the source segments, sec
+
+Example:
+1
+
+​
+transcodedSegmentsDuration
+number
+Duration of all the transcoded segments, sec
+
+Example:
+2
+
+​
+sourceBytes
+number
+Example:
+1
+
+​
+transcodedBytes
+number
+Example:
+2
+
+​
+ingestRate
+number
+Rate at which sourceBytes increases (bytes/second)
+
+Example:
+1
+
+​
+outgoingRate
+number
+Rate at which transcodedBytes increases (bytes/second)
+
+Example:
+2
+
+​
+isActive
+boolean
+If currently active
+
+Example:
+true
+
+​
+isHealthy
+any
+​
+issues
+any
+​
+createdByTokenName
+string
+Name of the token used to create this object
+
+Example:
+"abc-123-xyz-456"
+
+​
+createdAt
+number
+Timestamp (in milliseconds) at which stream object was created
+
+Example:
+1587667174725
+
+​
+parentId
+string
+Points to parent stream object
+
+Example:
+"de7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+streamKey
+string
+Used to form RTMP ingest URL
+
+Example:
+"hgebdhhigq"
+
+​
+pull
+object
+Configuration for a stream that should be actively pulled from an
+external source, rather than pushed to Livepeer. If specified, the
+stream will not have a streamKey.
+
+Show child attributes
+
+​
+playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+profiles
+object[]
+Profiles to transcode the stream into. If not specified, a default
+set of profiles will be used with 240p, 360p, 480p and 720p
+resolutions. Keep in mind that the source rendition is always kept.
+
+Show child attributes
+
+​
+projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+record
+boolean
+Should this stream be recorded? Uses default settings. For more
+customization, create and configure an object store.
+
+Example:
+false
+
+​
+recordingSpec
+object
+Configuration for recording the stream. This can only be set if
+record is true.
+
+Show child attributes
+
+​
+multistream
+object
+Show child attributes
+
+​
+suspended
+boolean
+If currently suspended
+
+​
+lastTerminatedAt
+number | null
+Timestamp (in milliseconds) when the stream was last terminated
+
+Example:
+1713281212993
+
+​
+userId
+stringdeprecated
+Example:
+"we7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+​
+renditions
+object
+
+Create a clip
+POST
+/
+clip
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Body
+application/json
+​
+playbackId
+stringrequired
+The playback ID of the stream or stream recording to clip. Asset playback IDs are not supported yet.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+startTime
+numberrequired
+The start timestamp of the clip in Unix milliseconds. See the ClipTrigger in the UI Kit for an example of how this is calculated (for HLS, it uses Program Date-Time tags, and for WebRTC, it uses the latency from server to client at stream startup).
+
+Example:
+1587667174725
+
+​
+endTime
+number
+The end timestamp of the clip in Unix milliseconds. See the ClipTrigger in the UI Kit for an example of how this is calculated (for HLS, it uses Program Date-Time tags, and for WebRTC, it uses the latency from server to client at stream startup).
+
+Example:
+1587667174725
+
+​
+name
+string
+The optional friendly name of the clip to create.
+
+Example:
+"My Clip"
+
+​
+sessionId
+string
+The optional session ID of the stream to clip. This can be used to clip recordings - if it is not specified, it will clip the ongoing livestream.
+
+Example:
+"de7818e7-610a-4057-8f6f-b785dc1e6f88"
+
+Response
+200
+
+200
+application/json
+Success
+
+​
+asset
+objectrequired
+Hide child attributes
+
+​
+asset.id
+stringrequired
+Example:
+"09F8B46C-61A0-4254-9875-F71F4C605BC7"
+
+​
+asset.source
+objectrequired
+Option 1
+Option 2
+Option 3
+Show child attributes
+
+​
+asset.name
+stringrequired
+The name of the asset. This is not necessarily the filename - it can be a custom name or title.
+
+Example:
+"filename.mp4"
+
+​
+asset.type
+enum<string>
+Type of the asset.
+
+Available options: video, audio 
+Example:
+"video"
+
+​
+asset.playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+asset.userId
+stringdeprecated
+Example:
+"66E2161C-7670-4D05-B71D-DA2D6979556F"
+
+​
+asset.playbackUrl
+string
+URL for HLS playback. It is recommended to not use this URL, and instead use playback IDs with the Playback Info endpoint to retrieve the playback URLs - this URL format is subject to change (e.g. https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8).
+
+Example:
+"https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8"
+
+​
+asset.downloadUrl
+string
+The URL to directly download the asset, e.g. https://livepeercdn.com/asset/eawrrk06ts2d0mzb/video. It is not recommended to use this for playback.
+
+Example:
+"https://livepeercdn.com/asset/eaw4nk06ts2d0mzb/video/download.mp4"
+
+​
+asset.playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+asset.creatorId
+object
+Show child attributes
+
+​
+asset.profiles
+object[]
+Requested profiles for the asset to be transcoded into. Configured
+on the upload APIs payload or through the stream.recordingSpec
+field for recordings. If not specified, default profiles are derived
+based on the source input. If this is a recording, the source will
+not be present in this list but will be available for playback.
+
+Show child attributes
+
+​
+asset.storage
+object
+Show child attributes
+
+​
+asset.status
+object
+Status of the asset
+
+Show child attributes
+
+​
+asset.projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+asset.createdAt
+number
+Timestamp (in milliseconds) at which asset was created
+
+Example:
+1587667174725
+
+​
+asset.createdByTokenName
+string
+Name of the token used to create this object
+
+​
+asset.size
+number
+Size of the asset in bytes
+
+Example:
+84934509
+
+​
+asset.hash
+object[] | null
+Hash of the asset
+
+Show child attributes
+
+​
+asset.videoSpec
+object
+Video metadata
+
+Show child attributes
+
+​
+task
+objectrequired
+Hide child attributes
+
+​
+task.id
+string
+Example:
+"34d7618e-fd42-4798-acf5-19504616a11e"
+
+Retrieve clips of a livestream
+GET
+/
+stream
+/
+{id}
+/
+clips
+
+Try it
+Authorizations
+​
+Authorization
+stringheaderrequired
+Bearer authentication header of the form Bearer <token>, where <token> is your auth token.
+
+Path Parameters
+​
+id
+stringrequired
+ID of the parent stream or playbackId of parent stream
+
+Response
+200
+
+200
+application/json
+Success
+
+​
+id
+stringrequired
+Example:
+"09F8B46C-61A0-4254-9875-F71F4C605BC7"
+
+​
+source
+objectrequired
+Option 1
+Option 2
+Option 3
+Show child attributes
+
+​
+name
+stringrequired
+The name of the asset. This is not necessarily the filename - it can be a custom name or title.
+
+Example:
+"filename.mp4"
+
+​
+type
+enum<string>
+Type of the asset.
+
+Available options: video, audio 
+Example:
+"video"
+
+​
+playbackId
+string
+The playback ID to use with the Playback Info endpoint to retrieve playback URLs.
+
+Example:
+"eaw4nk06ts2d0mzb"
+
+​
+userId
+stringdeprecated
+Example:
+"66E2161C-7670-4D05-B71D-DA2D6979556F"
+
+​
+playbackUrl
+string
+URL for HLS playback. It is recommended to not use this URL, and instead use playback IDs with the Playback Info endpoint to retrieve the playback URLs - this URL format is subject to change (e.g. https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8).
+
+Example:
+"https://livepeercdn.com/asset/ea03f37e-f861-4cdd-b495-0e60b6d753ad/index.m3u8"
+
+​
+downloadUrl
+string
+The URL to directly download the asset, e.g. https://livepeercdn.com/asset/eawrrk06ts2d0mzb/video. It is not recommended to use this for playback.
+
+Example:
+"https://livepeercdn.com/asset/eaw4nk06ts2d0mzb/video/download.mp4"
+
+​
+playbackPolicy
+object | null
+Whether the playback policy for an asset or stream is public or signed
+
+Show child attributes
+
+​
+creatorId
+object
+Show child attributes
+
+​
+profiles
+object[]
+Requested profiles for the asset to be transcoded into. Configured
+on the upload APIs payload or through the stream.recordingSpec
+field for recordings. If not specified, default profiles are derived
+based on the source input. If this is a recording, the source will
+not be present in this list but will be available for playback.
+
+Show child attributes
+
+​
+storage
+object
+Show child attributes
+
+​
+status
+object
+Status of the asset
+
+Show child attributes
+
+​
+projectId
+string
+The ID of the project
+
+Example:
+"aac12556-4d65-4d34-9fb6-d1f0985eb0a9"
+
+​
+createdAt
+number
+Timestamp (in milliseconds) at which asset was created
+
+Example:
+1587667174725
+
+​
+createdByTokenName
+string
+Name of the token used to create this object
+
+​
+size
+number
+Size of the asset in bytes
+
+Example:
+84934509
+
+​
+hash
+object[] | null
+Hash of the asset
+
+Show child attributes
+
+​
+videoSpec
+object
+Video metadata
+
+Show child attributes
+
+Optimize latency
+Learn how to optimize latency for your Livepeer Studio workflow.
+
+One of the first questions that many developers ask during Livepeer Studio onboarding is: “How do we optimize for low latency?” Many live streaming apps and sites rely on low latency to promote engagement and interaction between viewers and streamers.
+Latency refers to the lapse in time between a camera capturing an action in real life and viewers of a livestream seeing it happen on their screen. Ultra-low latency is when that time is short enough, typically 0.5 - 3 seconds, so viewers of a live-streaming application can interact with what’s happening in the stream in a way that feels natural.
+There’s a range of latencies to support a variety of use cases; low or ultra-low latency is a common goal, but it is one of many viable latency choices. The right latency depends on what you’re trying to achieve.
+In this primer, we provide an overview of Livepeer Studio’s approach to latency. By the end of the primer, you should have an understanding of how to achieve the right latency / quality balance for your workflow.
+​
+Understanding Protocols
+Livepeer Studio delivers video using several protocols. The most common (though not the only) delivery protocols supported by Livepeer Studio are HLS and WebRTC.
+​
+Delivering video with HLS
+HLS (HTTP Live Streaming), initially developed by Apple for iOS devices, serves video with a series of segmented .ts files. It is broadly supported across many device types and is extremely well-optimized for serving multiple renditions; these characteristics position HLS as the default choice for many gateways.
+However, HLS has very high overhead and latency. Specifically, its chunked segment delivery means that viewers must wait for the current segment to finish downloading before they can start viewing it. Similarly, HLS players often buffer a few segments in advance to ensure smooth playback and to handle network fluctuations. This buffer introduces additional latency, as the player waits to accumulate enough data before starting playback. Buffer behavior is heavily dependent on client implementation.
+HLS delivers video with standard latency of 10-20 seconds. Streaming HLS with Livepeer Studio’s recommended low-latency settings lead to ~10s latency.
+​
+Delivering video with WebRTC
+WebRTC (Web Real-Time Communication) is a streaming protocol known for its low-latency capabilities, making it suitable for real-time communication applications like video conferencing, online gaming, and live streaming. Unlike HLS, which is designed for adaptive streaming and on-demand content, WebRTC focuses on minimizing latency.
+WebRTC offers low latency by prioritizing real-time communication, direct peer-to-peer connections, UDP transport, and adaptive streaming while minimizing intermediaries. It is a preferred choice for applications where minimizing delay is critical, such as video conferencing and live interactive streaming.
+WebRTC delivers video with ultra-low latency of 0.5 - 3 seconds.
+​
+Optimizing Playback for Low Latency
+​
+Lowest possible latency (WebRTC playback)
+WebRTC is available as a delivery protocol for all streams regardless of input protocol; to achieve the lowest possible latency of 0.5 - 3 seconds, use of WebRTC delivery is required. We implement the WHIP/WHEP spec with a few minor nuances around SDP negotiation.
+To play back a WebRTC rendition, you will need to use a WebRTC-compatible player, such as the Livepeer Player.
+Playing WebRTC livestreams with the Livepeer Player
+Playing WebRTC livestreams with other players
+Please note that if b-frames are present in a livestream, WebRTC renditions will not be available. This is because in WebRTC video playback, b-frames will appear out-of-order on most systems.
+​
+Optimizing for Lower Latency (HLS and WebRTC ingest and playback)
+Depending on your goals, you may or may not want to optimize for the lowest latency; for example, if your user base has a high percentage of low-bandwidth mobile users, it may be preferable to optimize for bandwidth efficiency over latency.
+​
+Streaming with OBS
+Achieving the right balance between low latency and stream quality is essential for providing the best possible user experience. Two settings that significantly impact your stream quality, latency, and user experience are:
+Rate Control: This setting dictates the bitrate or “quality” of the stream. A high amount of bandwidth usually means better quality, but keep in mind that your output can never improve the quality of your stream beyond your input.
+Keyframe Interval: Video streams consist of full frames and data relative to the full frames. This setting determines how often a full frame appears, which heavily influences latency.
+To allow streamers to easily configure OBS for best performance with Livepeer Studio, we’ve created an OBS preset that can be selected in the OBS Settings panel.
+You can read more about configuring OBS here
+Selecting the Livepeer Studio preset
+Optimizing OBS for low latency
+Optimizing for Stream Quality
+Finally, we’ve compiled a set of recommended settings to achieve specific experience goals (e.g., highest quality but high latency, average quality but lower latency, or a balanced approach):
+Sample settings
+​
+In-browser broadcasting
+Livepeer Studio allows users to broadcast from within their browser using WebRTC broadcast. These broadcasts are optimized for low latency by default and can play back in HLS (8-10s latency) or WebRTC (0.5 - 3s latency).
+You can leverage this capability in three ways:
+Implement the customizable React component
+Embed a hosted version
+Roll your own broadcasting experience with plain WebRTC
+​
+Smoke testing your workflow
+When you first implement your livestreaming workflow, you may see higher-than-expected latency. This is common and likely means that a few settings need to be tweaked.
+​
+Check latency using the Livepeer Player
+Go to https://lvpr.tv/?v=<playbackId> and observe the latency. This will help isolate the cause of the latency.
+If you are seeing higher-than-expected latency on the Livepeer Player (>15s for HLS or >4s for WebRTC), it suggests something about the incoming stream is causing high latency. Check your keyframe interval, bitrate, and b-frame settings.
+Viewers changing the resolution will also impact the latency for WebRTC, since this will necessarily incur transcode latency.
+​
+If you’re using another HLS player, compare your HLS config to the Livepeer Player
+Our defaults can be found here. Please note that this config is a starting point that we feel is a good balance for latency, quality, rebuffering, etc.
+​
+Reach out to the Livepeer Studio team
+We will be happy to help troubleshoot so that you are able to achieve 0.5-3s latency with WebRTC or ~10s latency with HLS for the bulk of your users. Often, we achieve improvements by helping you tweak broadcasting settings or optimizing HLS configs.
+
+In-browser broadcasting
+Learn how to broadcast using WebRTC
+
+We demonstrate below how to broadcast from the web using Livepeer’s low latency WebRTC broadcast. Developers can either use the Livepeer Broadcast React component, or build their own WebRTC solution.
+​
+Using UI Kit Broadcast
+The example below shows how to use the Livepeer UI Kit Broadcast component to broadcast from the web.
+​
+Broadcast
+This guide assumes you have configured a Livepeer JS SDK client with an API key.
+We can use the Broadcast primitives with a stream key, from a stream we created.
+We show some simple styling below with Tailwind CSS, but this can use any styling library, since the primitives ship as unstyled, composable components.
+Broadcast.tsx
+
+Copy
+
+Ask AI
+import { EnableVideoIcon, StopIcon } from "@livepeer/react/assets";
+import * as Broadcast from "@livepeer/react/broadcast";
+import { getIngest } from "@livepeer/react/external";
+
+const streamKey = "your-stream-key";
+
+export const DemoBroadcast = () => {
+  return (
+    <Broadcast.Root ingestUrl={getIngest(streamKey)}>
+      <Broadcast.Container className="h-full w-full bg-gray-950">
+        <Broadcast.Video title="Current livestream" className="h-full w-full" />
+
+        <Broadcast.Controls className="flex items-center justify-center">
+          <Broadcast.EnabledTrigger className="w-10 h-10 hover:scale-105 flex-shrink-0">
+            <Broadcast.EnabledIndicator asChild matcher={false}>
+              <EnableVideoIcon className="w-full h-full" />
+            </Broadcast.EnabledIndicator>
+            <Broadcast.EnabledIndicator asChild>
+              <StopIcon className="w-full h-full" />
+            </Broadcast.EnabledIndicator>
+          </Broadcast.EnabledTrigger>
+        </Broadcast.Controls>
+
+        <Broadcast.LoadingIndicator asChild matcher={false}>
+          <div className="absolute overflow-hidden py-1 px-2 rounded-full top-1 left-1 bg-black/50 flex items-center backdrop-blur">
+            <Broadcast.StatusIndicator
+              matcher="live"
+              className="flex gap-2 items-center"
+            >
+              <div className="bg-red-500 animate-pulse h-1.5 w-1.5 rounded-full" />
+              <span className="text-xs select-none">LIVE</span>
+            </Broadcast.StatusIndicator>
+
+            <Broadcast.StatusIndicator
+              className="flex gap-2 items-center"
+              matcher="pending"
+            >
+              <div className="bg-white/80 h-1.5 w-1.5 rounded-full animate-pulse" />
+              <span className="text-xs select-none">LOADING</span>
+            </Broadcast.StatusIndicator>
+
+            <Broadcast.StatusIndicator
+              className="flex gap-2 items-center"
+              matcher="idle"
+            >
+              <div className="bg-white/80 h-1.5 w-1.5 rounded-full" />
+              <span className="text-xs select-none">IDLE</span>
+            </Broadcast.StatusIndicator>
+          </div>
+        </Broadcast.LoadingIndicator>
+      </Broadcast.Container>
+    </Broadcast.Root>
+  );
+};
+​
+Embeddable broadcast
+This is one of the easiest ways to broadcast video from your website/applications. You can embed the iframe on your website/applications by using the below code snippet.
+You can replace the STREAM_KEY with your stream key for the stream.
+
+Copy
+
+Ask AI
+<iframe
+  src="https://lvpr.tv/broadcast/{STREAM_KEY}"
+  allowfullscreen
+  allow="autoplay; encrypted-media; fullscreen; picture-in-picture; display-capture; camera; microphone"
+  frameborder="0"
+>
+</iframe>
+This will automatically stream from the browser with a fully composed UI, using STUN/TURN servers to avoid network firewall issues.
+​
+Adding custom broadcasting
+If you want to add custom broadcasting to your app and handle the WebRTC SDP negotiation without using the Livepeer React primitives, you can follow the steps below.
+​
+Get the SDP Host
+First, you will need to make a request to get the proper ingest URL for the region which your end user is in. We have a global presence, and we handle redirects based on GeoDNS to allow users to get the lowest latency server.
+To do this make a HEAD request to the WebRTC redirect endpoint:
+
+Copy
+
+Ask AI
+curl -I 'https://livepeer.studio/webrtc/{STREAM_KEY}'
+...
+> Location: https://lax-prod-catalyst-2.lp-playback.studio/webrtc/{STREAM_KEY}
+We are only interested in getting the redirect URL from the response, so that we can set up the correct ICE servers.
+From the above response headers, the best WebRTC ingest URL for the user is https://lax-prod-catalyst-2.lp-playback.studio/webrtc/{STREAM_KEY}. We will use this in the next step.
+The process will change in the future to remove the need for this extraneous HEAD request - please check back later.
+​
+Broadcast
+Now that we have the endpoint for the ICE servers, we can start SDP negotiation following the WHIP spec and kick off a livestream.
+The outline of the steps are:
+Create a new RTCPeerConnection with the ICE servers from the redirect URL.
+Construct an SDP offer using the library of your choice.
+Wait for ICE gathering.
+Send the SDP offer to the server and get the response.
+Use the response to set the remote description on the RTCPeerConnection.
+Get a local media stream and add the track to the peer connection, and set the video element src to the srcObject.
+
+Copy
+
+Ask AI
+// the redirect URL from the above GET request
+const redirectUrl = `https://lax-prod-catalyst-2.lp-playback.studio/webrtc/{STREAM_KEY}`;
+// we use the host from the redirect URL in the ICE server configuration
+const host = new URL(redirectUrl).host;
+
+const iceServers = [
+  {
+    urls: `stun:${host}`,
+  },
+  {
+    urls: `turn:${host}`,
+    username: "livepeer",
+    credential: "livepeer",
+  },
+];
+
+// get user media from the browser (which are camera/audio sources)
+const mediaStream = await navigator.mediaDevices.getUserMedia({
+  video: true,
+  audio: true,
+});
+
+const peerConnection = new RTCPeerConnection({ iceServers });
+
+// set the media stream on the video element
+element.srcObject = mediaStream;
+
+const newVideoTrack = mediaStream?.getVideoTracks?.()?.[0] ?? null;
+const newAudioTrack = mediaStream?.getAudioTracks?.()?.[0] ?? null;
+
+if (newVideoTrack) {
+  videoTransceiver =
+    peerConnection?.addTransceiver(newVideoTrack, {
+      direction: "sendonly",
+    }) ?? null;
+}
+
+if (newAudioTrack) {
+  audioTransceiver =
+    peerConnection?.addTransceiver(newAudioTrack, {
+      direction: "sendonly",
+    }) ?? null;
+}
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/createOffer
+ * We create an SDP offer here which will be shared with the server
+ */
+const offer = await peerConnection.createOffer();
+/** https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/setLocalDescription */
+await peerConnection.setLocalDescription(offer);
+
+/** Wait for ICE gathering to complete */
+const ofr = await new Promise((resolve) => {
+  /** Wait at most five seconds for ICE gathering. */
+  setTimeout(() => {
+    resolve(peerConnection.localDescription);
+  }, 5000);
+  peerConnection.onicegatheringstatechange = (_ev) => {
+    if (peerConnection.iceGatheringState === "complete") {
+      resolve(peerConnection.localDescription);
+    }
+  };
+});
+if (!ofr) {
+  throw Error("failed to gather ICE candidates for offer");
+}
+/**
+ * This response contains the server's SDP offer.
+ * This specifies how the client should communicate,
+ * and what kind of media client and server have negotiated to exchange.
+ */
+const sdpResponse = await fetch(redirectUrl, {
+  method: "POST",
+  mode: "cors",
+  headers: {
+    "content-type": "application/sdp",
+  },
+  body: ofr.sdp,
+});
+if (sdpResponse.ok) {
+  const answerSDP = await sdpResponse.text();
+  await peerConnection.setRemoteDescription(
+    new RTCSessionDescription({ type: "answer", sdp: answerSDP })
+  );
+}
+We just negotiated following the WHIP spec (which outlines the structure for the POST requests seen above) and we did SDP negotiation to create a new livestream. We then retrieved a local camera source and started a broadcast!
+To make the above process clearer, here is the flow (credit to the authors of the WHIP spec):
+The final HTTP DELETE is not needed for our media server, since we detect the end of broadcast by the lack of incoming packets from the gateway.
+WHIP Outline
+
+Copy
+
+Ask AI
++-----------------+         +---------------+ +--------------+ +----------------+
+ | WebRTC Producer |         | WHIP endpoint | | Media Server | | WHIP Resource  |
+ +---------+-------+         +-------+- -----+ +------+-------+ +--------|-------+
+           |                         |                |                  |
+           |                         |                |                  |
+           |HTTP POST (SDP Offer)    |                |                  |
+           +------------------------>+                |                  |
+           |201 Created (SDP answer) |                |                  |
+           +<------------------------+                |                  |
+           |          ICE REQUEST                     |                  |
+           +----------------------------------------->+                  |
+           |          ICE RESPONSE                    |                  |
+           <------------------------------------------+                  |
+           |          DTLS SETUP                      |                  |
+           <==========================================>                  |
+           |          RTP/RTCP FLOW                   |                  |
+           +------------------------------------------>                  |
+           | HTTP DELETE                                                 |
+           +------------------------------------------------------------>+
+           | 200 OK                                                      |
+           <-------------------------------------------------------------x
+
+           Monitor stream health
+Learn how to monitor stream metrics on Livepeer
+
+This guide provides instructions and information about using stream metrics to:
+Monitor any active stream for issues that may impact the quality of your stream
+Understand the metrics for operating a livestreaming or user generated content platform
+View health status of your livestream (API and Dashboard No-Code Option)
+​
+Metrics with Source Segments Duration
+The value of sourceSegmentsDuration returned is the duration in seconds of the asset source processed by Livepeer Studio. On the parent stream object, this value equates to the total amount of source video ingested by Livepeer Studio all time. On the session object, this value is the length of the livestream session (or the session recording).
+​
+Request
+Use the get stream endpoint to retrieve a stream, or
+Node.js
+Python
+Go
+
+Copy
+
+Ask AI
+import { Livepeer } from "livepeer";
+
+const apiKey = 'YOUR_API_KEY';
+const streamId = 'STREAM_ID';
+
+const livepeer = new Livepeer({apiKey});
+
+livepeer.stream.get(streamId)
+  .then((response) => {
+    console.log("Stream details:", response);
+  })
+  .catch((error) => {
+    console.error("Error fetching stream details:", error);
+  });
+GET /session/{id} to retrieve a session object
+Node.js
+Python
+Go
+
+Copy
+
+Ask AI
+import { Livepeer } from "livepeer";
+
+const apiKey = 'YOUR_API_KEY';
+const sessionId = 'SESSION_ID';
+
+const livepeer = new Livepeer({apiKey});
+
+livepeer
+  .session.get(sessionId)
+  .then((response) => {
+    console.log("Session details:", response);
+  })
+  .catch((error) => {
+    console.error("Error fetching session details:", error);
+  });
+​
+Response
+Returns a 200 response with the following object:
+
+Copy
+
+Ask AI
+{
+  "name": "test_stream",
+  "id": "ijkl61f3-95bd-4971-a7b1-4dcb5d39e78a",
+  "createdAt": 1596081229373,
+  "streamKey": "abcd-uimq-jtgy-x98v",
+  "playbackId": "efghb2mxupongp5k",
+  "isActive": "true",
+  "lastSeen": 1596119750455,
+  "sourceSegments": 1360,
+  "transcodedSegments": 5480,
+  "sourceSegmentsDuration": 2630.53200000000004,
+  "transcodedSegmentsDuration": 10620.1280000000004
+  // other asset object keys, like profiles and parentId
+}
+​
+Global Health Status
+Healthy indicates that all the Health Checks are in a Healthy state.
+Unhealthy indicates that one or more of the Health Checks are in an Unhealthy state
+Idle indicates that the stream is not currently active
+​
+Health Checks
+Transcoding — A Healthy status indicates that video transcoding is occurring, and the multiple profiles of your stream are available for playback. An Unhealthy status indicates that we have failed to generate the profiles, so only the original video will be available. Check the event log below for any actionable errors, or check the Status page for platform-wide issues.
+Real-time — This indicates whether our system transcoded the stream faster than in real-time. In other words, if the video transcodes, latency is lower than the video duration. Unconventional configurations may cause an Unhealthy status.
+Multistreaming — This health check indicates whether all configured multistream targets are connected. If no targets exist, this will appear blank and not be considered for the global health state. If this shows up as Unhealthy, you can also check the status of the individual multistream targets in the Overview tab, where the targets can be either Idle, Pending, Online'or' Offline:
+An Idle status indicates that the stream is not currently active, so neither is multistreaming.
+A Pending status indicates that our system tries connecting to the respective multistream target.
+An Online status indicates that the multistream target is successfully connected.
+An Offline status means that we’ve received an error when trying to connect to the target. To try again, check the ingest URL and stream key of your destination service, re-configure your multistream target and restart your stream.
+​
+Logs
+Logs will surface informational alerts (ex., stream has started/stopped, multistream destinations have connected/disconnected) or any fatal errors from the transcoding process. Here is an example of a fatal error:
+
+Copy
+
+Ask AI
+Transcode error from ewr-prod-livepeer-orchestrator-0 for segment 0:
+**Unsupported input pixel format**
+If you run into this or any similar errors, check the configuration in your streaming software (e.g., OBS) and restart the stream.
+​
+Session Ingest Rate
+Session ingest rate tells you the bitrate of the video received by Livepeer ingest servers, updated every 10 seconds. A high bitrate is suggestive that streams into the Livepeer system are high quality, your encoder is working correctly, and your internet connection is good. A fluctuating or low bitrate may suggest that your encoder is misconfigured or that the streamer internet connection isn’t as strong as it should be to deliver high-quality streams to your viewers.
+​
+Monitoring in the Dashboard
+In the dashboard, there will be a health tab on the right side:
+
+Listen to stream events
+Learn how to listen to stream events using Studio webhooks
+
+Livepeer Studio uses webhooks to communicate with your application asynchronously when events for your stream occur. For example, you may want to know when a stream is active or idle, so that you can surface this information to viewers.
+When these events happen, you can configure Studio to make a POST request to a webhook URL that you specify.
+​
+Type of stream events
+stream.started	The parent stream object’s isActive value is marked as true and the .m3u8 HLS URL works
+stream.idle	The parent stream object’s isActive value should be marked as false and the .m3u8 HLS URL no longer works
+recording.ready	This fires when a recording is ready to be downloaded
+recording.started	This fires when recording has started on an active stream
+recording.waiting	This fires after a stream with recording on has concluded and is not yet ready to be downloaded. Typically it takes 5 minutes for recordings to be ready for download.
+multistream.connected	This fires when we’ve successfully connected to the multistream target
+multistream.error	This fires when we’ve encountered an error either while attempting to connect to the third party streaming service or while broadcasting.
+multistream.disconnected	This fires when we are no longer sending video to the multistream target.
+​
+Set up a webhook endpoint
+The first step is to set up a webhook endpoint in your application. This is the URL that Livepeer Studio will send the event to. Learn more about setting up a webhook endpoint.
+​
+Add a webhook URL to Livepeer Studio
+Log in to the Livepeer Studio and navigate to the Developers/Webhooks page.
+
+Click the “Create Webhook” button and enter URL of webhook endpoint. Select any stream event (with stream/multistream prefix) to receive notifications for and click “Create Webhook”.

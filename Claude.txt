@@ -1,0 +1,17 @@
+I need a front end web application the connects directly to my TCP hook. We need to create a web socket bridge that securely connects the front end hosted on Vercel, to my TCP port. It is critical nobody can access my local ports so we need our bridge to be hacker proof. 
+
+Use the controller .html file for finding all of the commands and user interface. We need this below our livepeer media player which can also be found through livepeer_player. 
+
+This application will be called Mannequin, and the idea is that people can customize the mannequin to look however they want. Change hair color, skin color, outfit, camera angle, level, etc.
+
+So the pipeline should look like End User -> Vercel application -> WebSocket to TCP Bridge -> TCP Command -> Unreal Engine Executes TCP Command -> Unreal Engine sends frames out UDP -> Correct RTMP bridge -> webrtc bridge with audio -> Livepeer stream
+
+
+Here is the directory for my game so you can analyze the .cpp and .h files for the in game rtc component and tcp actor. Please do not modify it.
+
+"C:\UnrealBuilds\Embody\Source\Embody\TCPActor.h"
+"C:\UnrealBuilds\Embody\Source\Embody\WebRTCBridgeComponent.cpp"
+"C:\UnrealBuilds\Embody\Source\Embody\WebRTCBridgeComponent.h"
+"C:\UnrealBuilds\Embody\Source\Embody\TCPActor.cpp"
+
+Create a simple vercel react front end and web socket connector that will connect to my Unreal Engine TCP connector. 

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Livepeer Stream Player - Ultra Low Latency</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .header p {
+            color: #888;
+            font-size: 1.1em;
+        }
+        
+        .player-section {
+            background: #333;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        #videoPlayer {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16/9;
+            display: block;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(45deg, #0099cc, #007399);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(45deg, #555, #777);
+        }
+        
+        .btn.secondary:hover {
+            background: linear-gradient(45deg, #666, #888);
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .info-card {
+            background: #444;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #00d4ff;
+        }
+        
+        .info-card h3 {
+            color: #00d4ff;
+            margin-top: 0;
+            font-size: 1.3em;
+        }
+        
+        .info-card p, .info-card ul {
+            color: #ccc;
+            line-height: 1.6;
+        }
+        
+        .info-card ul {
+            padding-left: 20px;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.live {
+            background: #44ff44;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .protocol-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .protocol-selector label {
+            margin-right: 20px;
+            font-weight: 600;
+        }
+        
+        .protocol-selector input[type="radio"] {
+            margin-right: 5px;
+        }
+        
+        .latency-info {
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1.1em;
+        }
+        
+        .latency-webrtc {
+            color: #44ff44;
+            font-weight: bold;
+        }
+        
+        .latency-hls {
+            color: #ffaa44;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Unreal Engine → Livepeer Stream</h1>
+            <p>Ultra-low latency streaming from Unreal Engine 5.5 to Livepeer</p>
+        </div>
+        
+        <div class="player-section">
+            <div class="protocol-selector">
+                <label>
+                    <input type="radio" name="protocol" value="webrtc" checked>
+                    WebRTC <span class="latency-webrtc">(0.5-3s latency)</span>
+                </label>
+                <label>
+                    <input type="radio" name="protocol" value="hls">
+                    HLS <span class="latency-hls">(~10s latency)</span>
+                </label>
+            </div>
+            
+            <div class="latency-info">
+                <span id="currentLatency">Current Protocol: WebRTC - Ultra Low Latency</span>
+            </div>
+            
+            <div class="video-container">
+                <video id="videoPlayer" controls autoplay muted playsinline>
+                    <source id="videoSource" src="" type="">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            
+            <div class="status">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span id="statusText">Connecting to stream...</span>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="startStream()">🎯 Start Stream</button>
+                <button class="btn secondary" onclick="stopStream()">⏹️ Stop Stream</button>
+                <button class="btn secondary" onclick="refreshStream()">🔄 Refresh</button>
+                <a class="btn secondary" href="https://lvpr.tv/broadcast/7de0-7v24-76co-mvbd" target="_blank">📡 Go Live</a>
+            </div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>📊 Stream Information</h3>
+                <p><strong>Stream ID:</strong> 7de094b8-3fbe-4b16-ac75-594556d39b18</p>
+                <p><strong>Playback ID:</strong> 7de0lr18mu0sassl</p>
+                <p><strong>Resolution:</strong> 1280x720 @ 30fps</p>
+                <p><strong>Pipeline:</strong> Unreal Engine → Direct Livepeer</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>⚡ Latency Options</h3>
+                <ul>
+                    <li><strong>WebRTC:</strong> 0.5-3 seconds (Ultra-low latency)</li>
+                    <li><strong>HLS:</strong> ~10 seconds (Standard latency)</li>
+                    <li><strong>Target:</strong> Sub-3 second end-to-end</li>
+                </ul>
+            </div>
+            
+            <div class="info-card">
+                <h3>🔧 Technical Details</h3>
+                <ul>
+                    <li>Protocol: WHIP/WHEP (WebRTC) or HLS</li>
+                    <li>Frame Rate: 30fps with precise timing</li>
+                    <li>Encoding: H.264 with low-latency profile</li>
+                    <li>Transport: UDP for Unreal → Bridge</li>
+                </ul>
+            </div>
+            
+            <div class="info-card">
+                <h3>🎮 How to Stream</h3>
+                <ul>
+                    <li>Start your Unreal Engine project</li>
+                    <li>Run the WebRTC bridge (Python pipeline)</li>
+                    <li>Click "Start Stream" above</li>
+                    <li>Switch protocols to test latency</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Stream configuration
+        const PLAYBACK_ID = '7de0lr18mu0sassl';
+        const HLS_URL = `https://livepeercdn.studio/hls/${PLAYBACK_ID}/index.m3u8`;
+        const WEBRTC_URL = `https://livepeer.studio/webrtc/${PLAYBACK_ID}`;
+        
+        let currentProtocol = 'webrtc';
+        let videoPlayer = document.getElementById('videoPlayer');
+        let statusIndicator = document.getElementById('statusIndicator');
+        let statusText = document.getElementById('statusText');
+        let currentLatencySpan = document.getElementById('currentLatency');
+        let hls = null;
+        let webrtcConnection = null;
+        
+        // Protocol switching
+        document.querySelectorAll('input[name="protocol"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                currentProtocol = this.value;
+                updateLatencyInfo();
+                if (videoPlayer.src) {
+                    startStream(); // Restart with new protocol
+                }
+            });
+        });
+        
+        function updateLatencyInfo() {
+            if (currentProtocol === 'webrtc') {
+                currentLatencySpan.textContent = 'Current Protocol: WebRTC - Ultra Low Latency (0.5-3s)';
+                currentLatencySpan.className = 'latency-webrtc';
+            } else {
+                currentLatencySpan.textContent = 'Current Protocol: HLS - Standard Latency (~10s)';
+                currentLatencySpan.className = 'latency-hls';
+            }
+        }
+        
+        function updateStatus(status, isLive = false) {
+            statusText.textContent = status;
+            statusIndicator.className = isLive ? 'status-indicator live' : 'status-indicator';
+        }
+        
+        async function startWebRTCStream() {
+            try {
+                updateStatus('Connecting to WebRTC stream...');
+                
+                // For now, fallback to HLS since WebRTC requires more complex setup
+                console.log('WebRTC URL would be:', WEBRTC_URL);
+                updateStatus('WebRTC not yet implemented - falling back to HLS');
+                await startHLSStream();
+                
+            } catch (error) {
+                console.error('WebRTC connection failed:', error);
+                updateStatus('WebRTC connection failed - trying HLS backup');
+                await startHLSStream();
+            }
+        }
+        
+        async function startHLSStream() {
+            try {
+                updateStatus('Connecting to HLS stream...');
+                
+                if (hls) {
+                    hls.destroy();
+                }
+                
+                if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    // Native HLS support (Safari)
+                    videoPlayer.src = HLS_URL;
+                } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    // Use HLS.js for other browsers
+                    hls = new Hls({
+                        lowLatencyMode: true,
+                        backBufferLength: 90,
+                        maxBufferLength: 30,
+                        maxMaxBufferLength: 60,
+                        liveSyncDurationCount: 1,
+                        liveMaxLatencyDurationCount: 3
+                    });
+                    
+                    hls.loadSource(HLS_URL);
+                    hls.attachMedia(videoPlayer);
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        updateStatus('Stream connected - Playing HLS', true);
+                        videoPlayer.play();
+                    });
+                    
+                    hls.on(Hls.Events.ERROR, function(event, data) {
+                        console.error('HLS Error:', data);
+                        if (data.fatal) {
+                            updateStatus(`HLS Error: ${data.details}`);
+                        }
+                    });
+                } else {
+                    updateStatus('HLS not supported in this browser');
+                }
+                
+            } catch (error) {
+                console.error('HLS connection failed:', error);
+                updateStatus('HLS connection failed');
+            }
+        }
+        
+        async function startStream() {
+            if (currentProtocol === 'webrtc') {
+                await startWebRTCStream();
+            } else {
+                await startHLSStream();
+            }
+        }
+        
+        function stopStream() {
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+            
+            if (webrtcConnection) {
+                webrtcConnection.close();
+                webrtcConnection = null;
+            }
+            
+            videoPlayer.src = '';
+            updateStatus('Stream stopped');
+        }
+        
+        function refreshStream() {
+            stopStream();
+            setTimeout(startStream, 1000);
+        }
+        
+        // Auto-start when page loads
+        window.addEventListener('load', function() {
+            updateLatencyInfo();
+            console.log('Livepeer Player loaded. Stream URLs:');
+            console.log('HLS:', HLS_URL);
+            console.log('WebRTC:', WEBRTC_URL);
+            
+            // Auto-start the stream
+            setTimeout(startStream, 2000);
+        });
+        
+        // Handle video events
+        videoPlayer.addEventListener('loadstart', () => updateStatus('Loading stream...'));
+        videoPlayer.addEventListener('canplay', () => updateStatus('Stream ready - Playing', true));
+        videoPlayer.addEventListener('playing', () => updateStatus('Stream playing', true));
+        videoPlayer.addEventListener('error', (e) => updateStatus(`Video error: ${e.message}`));
+        videoPlayer.addEventListener('stalled', () => updateStatus('Stream stalled - buffering...'));
+        videoPlayer.addEventListener('waiting', () => updateStatus('Buffering...'));
+    </script>
+    
+    <!-- HLS.js for browsers that don't support native HLS -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</body>
+</html>
