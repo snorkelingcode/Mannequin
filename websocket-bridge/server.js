@@ -72,6 +72,7 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP',
     standardHeaders: true,
     legacyHeaders: false,
+    trustProxy: true, // Explicitly enable trust proxy for Railway
 });
 
 app.use('/api', limiter);
