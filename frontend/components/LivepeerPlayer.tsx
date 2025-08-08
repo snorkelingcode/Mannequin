@@ -18,7 +18,6 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
     <div className={`card ${className}`}>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-primary-400 mb-2">🚀 Live Mannequin Stream</h2>
-        <p className="text-dark-300">Ultra-low latency streaming from Unreal Engine 5.5</p>
       </div>
       
       {/* Livepeer Stream Iframe */}
@@ -42,14 +41,6 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
         </span>
       </div>
       
-      {/* Stream Info */}
-      <div className="mt-6 text-sm text-dark-400 space-y-1">
-        <div><strong>Stream ID:</strong> 7de094b8-3fbe-4b16-ac75-594556d39b18</div>
-        <div><strong>Playback ID:</strong> {STREAM_CONFIG.PLAYBACK_ID}</div>
-        <div><strong>Resolution:</strong> 1280x720 @ 30fps</div>
-        <div><strong>Player:</strong> Livepeer Embedded Player</div>
-        <div><strong>Latency:</strong> Ultra-low via WebRTC/HLS adaptive</div>
-      </div>
       
     </div>
   )

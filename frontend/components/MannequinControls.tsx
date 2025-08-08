@@ -167,7 +167,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
       
       
       {/* Appearance Customization */}
-      <CollapsibleSection title="✨ Appearance">
+      <CollapsibleSection title="✨ Appearance" defaultOpen={true}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Outfits */}
           <div>

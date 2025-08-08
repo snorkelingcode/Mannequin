@@ -12,11 +12,7 @@ export default function Home() {
   const {
     isConnected,
     isAuthenticated,
-    sendCommand,
-    connectionStatus,
-    error,
-    connect,
-    disconnect
+    sendCommand
   } = useWebSocket(process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8080')
   
   return (
@@ -35,23 +31,6 @@ export default function Home() {
           </p>
         </header>
         
-        {/* Connection Status Banner */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-red-400 font-semibold">Connection Error</h3>
-                <p className="text-red-300 text-sm">{error}</p>
-              </div>
-              <button
-                onClick={connect}
-                className="btn-secondary px-4 py-2 text-sm"
-              >
-                🔄 Retry
-              </button>
-            </div>
-          </div>
-        )}
         
         
         {/* Main Layout */}
