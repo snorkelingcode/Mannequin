@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Hls from 'hls.js'
 
 interface LivepeerPlayerProps {
   className?: string
@@ -69,7 +68,11 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
         video.addEventListener('loadedmetadata', () => {
           updateStatus('connected', 'Stream connected - Playing HLS (Native)')
         })
-      } else if (Hls.isSupported()) {
+      } else {
+        // Dynamic import for hls.js
+        const { default: Hls } = await import('hls.js')
+        
+        if (Hls.isSupported()) {
         // Use HLS.js for other browsers
         const hls = new Hls({
           lowLatencyMode: true,
@@ -116,8 +119,9 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
           }
         })
         
-      } else {
-        throw new Error('HLS not supported in this browser')
+        } else {
+          throw new Error('HLS not supported in this browser')
+        }
       }
       
     } catch (error) {
@@ -312,7 +316,7 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
       {/* Stream Info */}
       <div className="mt-6 text-sm text-dark-400 space-y-1">
         <div><strong>Stream ID:</strong> 7de094b8-3fbe-4b16-ac75-594556d39b18</div>
-        <div><strong>Playback ID:</strong> {STREAM_CONFIG.PLAYBOOK_ID}</div>
+        <div><strong>Playback ID:</strong> {STREAM_CONFIG.PLAYBACK_ID}</div>
         <div><strong>Resolution:</strong> 1280x720 @ 30fps</div>
         <div><strong>Current Protocol:</strong> {protocol.toUpperCase()}</div>
       </div>
