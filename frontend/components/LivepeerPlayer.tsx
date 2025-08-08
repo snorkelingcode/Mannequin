@@ -33,44 +33,16 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
   
   const startWebRTCStream = async () => {
     try {
-      updateStatus('connecting', 'Connecting to local WebRTC bridge...')
+      updateStatus('connecting', 'Connecting to WebRTC stream...')
       
-      if (!videoRef.current) {
-        throw new Error('Video element not available')
-      }
+      // Your bridge sends to Livepeer, so we use Livepeer's WebRTC endpoint
+      // This connects to the stream your Python bridge is sending to
+      console.log('WebRTC URL:', STREAM_CONFIG.WEBRTC_URL)
+      updateStatus('connected', 'Using HLS for now - WebRTC integration coming soon')
       
-      // Connect to your local WebRTC bridge that receives UDP from Unreal Engine
-      const ws = new WebSocket(STREAM_CONFIG.LOCAL_WEBRTC_URL)
-      
-      ws.onopen = () => {
-        updateStatus('connected', 'Connected to WebRTC bridge - Waiting for stream')
-        console.log('Connected to local WebRTC bridge')
-      }
-      
-      ws.onmessage = (event) => {
-        // Handle video frames from your WebRTC bridge
-        try {
-          const data = JSON.parse(event.data)
-          if (data.type === 'video_frame') {
-            // Process video frame data from your bridge
-            console.log('Received video frame from bridge')
-          }
-        } catch (e) {
-          // Binary video data - handle raw frames
-          console.log('Received binary video data')
-        }
-      }
-      
-      ws.onerror = (error) => {
-        console.error('WebRTC bridge connection failed:', error)
-        updateStatus('error', 'WebRTC bridge connection failed - falling back to HLS')
-        ws.close()
-        await startHLSStream()
-      }
-      
-      ws.onclose = () => {
-        updateStatus('disconnected', 'WebRTC bridge connection closed')
-      }
+      // For now, fall back to HLS since it's more reliable
+      // Your Python bridge → Livepeer RTMP → HLS works perfectly
+      await startHLSStream()
       
     } catch (error) {
       console.error('WebRTC connection failed:', error)
