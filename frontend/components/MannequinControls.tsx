@@ -72,10 +72,6 @@ function CollapsibleSection({ title, children, defaultOpen = false }: Collapsibl
 }
 
 export default function MannequinControls({ sendCommand, isConnected }: MannequinControlsProps) {
-  // Camera state
-  const [cameraPos, setCameraPos] = useState({ x: 0, y: 0, z: 0 })
-  const [cameraRot, setCameraRot] = useState({ rx: 0, ry: 0, rz: 0 })
-  const [continuousUpdate, setContinuousUpdate] = useState(true)
   
   // Character state
   const [skinTone, setSkinTone] = useState(0.75)
@@ -154,36 +150,6 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
     // Other
     horns: 0.0              // MTH
   })
-  
-  // Character info
-  const [characterName, setCharacterName] = useState('Lucy')
-  
-  const handleCameraUpdate = async (axis: string, value: number) => {
-    if (axis.startsWith('r')) {
-      setCameraRot(prev => ({ ...prev, [axis]: value }))
-    } else {
-      setCameraPos(prev => ({ ...prev, [axis]: value }))
-    }
-    
-    if (continuousUpdate && isConnected) {
-      const { x, y, z } = cameraPos
-      const { rx, ry, rz } = cameraRot
-      const command = `CAMSTREAM_${x.toFixed(3)}_${y.toFixed(3)}_${z.toFixed(3)}_${rx.toFixed(3)}_${ry.toFixed(3)}_${rz.toFixed(3)}`
-      await sendCommand(command)
-    }
-  }
-  
-  const sendCameraCommand = async () => {
-    const { x, y, z } = cameraPos
-    const { rx, ry, rz } = cameraRot
-    const command = `CAMSTREAM_${x.toFixed(3)}_${y.toFixed(3)}_${z.toFixed(3)}_${rx.toFixed(3)}_${ry.toFixed(3)}_${rz.toFixed(3)}`
-    await sendCommand(command)
-  }
-  
-  const resetCamera = () => {
-    setCameraPos({ x: 0, y: 0, z: 0 })
-    setCameraRot({ rx: 0, ry: 0, rz: 0 })
-  }
   
   const handleSkinToneChange = async (value: number) => {
     setSkinTone(value)
@@ -300,212 +266,48 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
     }
   }
   
-  const handleCharacterAction = async (action: string) => {
-    switch (action) {
-      case 'new':
-        await sendCommand('NEW.Character')
-        break
-      case 'save':
-        await sendCommand('BTN.Save')
-        break
-      case 'load':
-        await sendCommand(`LOAD_${characterName}`)
-        break
-      case 'delete':
-        await sendCommand(`DELETE_${characterName}`)
-        break
-      case 'setName':
-        await sendCommand(`NAME_${characterName}`)
-        break
-    }
-  }
-  
   return (
     <div className="space-y-6">
-      {/* Camera Controls */}
-      <CollapsibleSection title="📹 Camera & Position" defaultOpen={true}>
-        <div className="space-y-6">
-          {/* Camera Position */}
-          <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Camera Position</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <SliderControl
-                label="X Position"
-                value={cameraPos.x}
-                onChange={(value) => handleCameraUpdate('x', value)}
-                min={-500}
-                max={500}
-                step={1}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Y Position" 
-                value={cameraPos.y}
-                onChange={(value) => handleCameraUpdate('y', value)}
-                min={-500}
-                max={500}
-                step={1}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Z Position"
-                value={cameraPos.z}
-                onChange={(value) => handleCameraUpdate('z', value)}
-                min={-500}
-                max={500}
-                step={1}
-                disabled={!isConnected}
-              />
-            </div>
-          </div>
-
-          {/* Camera Rotation */}
-          <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Camera Rotation</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <SliderControl
-                label="X Rotation"
-                value={cameraRot.rx}
-                onChange={(value) => handleCameraUpdate('rx', value)}
-                min={-180}
-                max={180}
-                step={1}
-                unit="°"
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Y Rotation"
-                value={cameraRot.ry}
-                onChange={(value) => handleCameraUpdate('ry', value)}
-                min={-180}
-                max={180}
-                step={1}
-                unit="°"
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Z Rotation"
-                value={cameraRot.rz}
-                onChange={(value) => handleCameraUpdate('rz', value)}
-                min={-180}
-                max={180}
-                step={1}
-                unit="°"
-                disabled={!isConnected}
-              />
-            </div>
-          </div>
-
-          {/* Camera Presets */}
-          <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Camera Presets</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {[
-                { label: 'Default', cmd: 'CAMSHOT.Default' },
-                { label: 'Extreme Close', cmd: 'CAMSHOT.ExtremeClose' },
-                { label: 'Close', cmd: 'CAMSHOT.Close' },
-                { label: 'High Angle', cmd: 'CAMSHOT.HighAngle' },
-                { label: 'Low Angle', cmd: 'CAMSHOT.LowAngle' },
-                { label: 'Medium', cmd: 'CAMSHOT.Medium' },
-                { label: 'Mobile Medium', cmd: 'CAMSHOT.MobileMedium' },
-                { label: 'Wide Shot', cmd: 'CAMSHOT.WideShot' },
-                { label: 'Mobile Wide', cmd: 'CAMSHOT.MobileWideShot' }
-              ].map(({ label, cmd }) => (
-                <button
-                  key={cmd}
-                  onClick={() => sendCommand(cmd)}
-                  disabled={!isConnected}
-                  className="btn-secondary text-xs py-2"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* View Controls */}
-          <div>
-            <h4 className="text-lg font-semibold text-white mb-3">View Controls</h4>
-            <div className="flex gap-2">
-              <button
-                onClick={() => sendCommand('View.Desktop')}
-                disabled={!isConnected}
-                className="btn-secondary"
-              >
-                Desktop View
-              </button>
-              <button
-                onClick={() => sendCommand('View.Mobile')}
-                disabled={!isConnected}
-                className="btn-secondary"
-              >
-                Mobile View
-              </button>
-              <button
-                onClick={resetCamera}
-                disabled={!isConnected}
-                className="btn-primary"
-              >
-                Reset Camera
-              </button>
-            </div>
-          </div>
-
-          {/* Continuous Update Toggle */}
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-dark-300">Continuous Camera Update</label>
-            <input
-              type="checkbox"
-              checked={continuousUpdate}
-              onChange={(e) => setContinuousUpdate(e.target.checked)}
-              className="form-checkbox h-4 w-4 text-primary-500"
-            />
-          </div>
+      {/* Camera Presets */}
+      <CollapsibleSection title="📹 Camera Presets" defaultOpen={true}>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          {[
+            { label: 'Default', cmd: 'CAMSHOT.Default' },
+            { label: 'Extreme Close', cmd: 'CAMSHOT.ExtremeClose' },
+            { label: 'Close', cmd: 'CAMSHOT.Close' },
+            { label: 'High Angle', cmd: 'CAMSHOT.HighAngle' },
+            { label: 'Low Angle', cmd: 'CAMSHOT.LowAngle' },
+            { label: 'Medium', cmd: 'CAMSHOT.Medium' },
+            { label: 'Mobile Medium', cmd: 'CAMSHOT.MobileMedium' },
+            { label: 'Wide Shot', cmd: 'CAMSHOT.WideShot' },
+            { label: 'Mobile Wide', cmd: 'CAMSHOT.MobileWideShot' }
+          ].map(({ label, cmd }) => (
+            <button
+              key={cmd}
+              onClick={() => sendCommand(cmd)}
+              disabled={!isConnected}
+              className="btn-secondary text-xs py-2"
+            >
+              {label}
+            </button>
+          ))}
         </div>
-      </CollapsibleSection>
-      
-      {/* Character Management */}
-      <CollapsibleSection title="👤 Character Management">
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={characterName}
-              onChange={(e) => setCharacterName(e.target.value)}
-              placeholder="Character name..."
-              className="flex-1 px-3 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white"
-            />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <button
-              onClick={() => handleCharacterAction('new')}
-              disabled={!isConnected}
-              className="btn-primary"
-            >
-              New Character
-            </button>
-            <button
-              onClick={() => handleCharacterAction('save')}
-              disabled={!isConnected}
-              className="btn-secondary"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => handleCharacterAction('load')}
-              disabled={!isConnected}
-              className="btn-secondary"
-            >
-              Load
-            </button>
-            <button
-              onClick={() => handleCharacterAction('delete')}
-              disabled={!isConnected}
-              className="btn-danger"
-            >
-              Delete
-            </button>
-          </div>
+        
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => sendCommand('View.Desktop')}
+            disabled={!isConnected}
+            className="btn-secondary"
+          >
+            Desktop View
+          </button>
+          <button
+            onClick={() => sendCommand('View.Mobile')}
+            disabled={!isConnected}
+            className="btn-secondary"
+          >
+            Mobile View
+          </button>
         </div>
       </CollapsibleSection>
       
