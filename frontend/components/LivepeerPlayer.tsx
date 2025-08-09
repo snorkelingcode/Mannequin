@@ -17,7 +17,7 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
   return (
     <div className={`card ${className}`}>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-primary-400 mb-2">🚀 Live Mannequin Stream</h2>
+        <h2 className="text-2xl font-bold text-primary-400 mb-2">Lucy</h2>
       </div>
       
       {/* Livepeer Stream Iframe */}

@@ -21,18 +21,16 @@ export default function Home() {
         {/* Header */}
         <header className="text-center mb-8">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent mb-4">
-            Mannequin
+            Mannequin Beta
           </h1>
           <p className="text-xl text-dark-300">
-            Interactive 3D Character Customization Platform
+            Interactive Metahuman Customization Platform
           </p>
           <p className="text-sm text-dark-400 mt-2">
-            Powered by Unreal Engine 5.5 • Streamed via Livepeer • Secured WebSocket Bridge
+            All changes appear globally. When you make a change, everyone sees it in real-time. Let's see what we can create!
           </p>
         </header>
-        
-        
-        
+      
         {/* Main Layout */}
         <div className={`grid gap-6 ${showControls ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} transition-all duration-300`}>
           {/* Video Player - Full width when controls are hidden */}
@@ -83,11 +81,11 @@ export default function Home() {
         
         {/* Footer */}
         <footer className="mt-12 text-center text-dark-400 text-sm">
-          <p>
-            Built with Next.js, TypeScript, Tailwind CSS • 
+          <p> 
             Powered by Unreal Engine 5.5 • 
             Streamed via Livepeer • 
-            Deployed on Vercel
+            Deployed on Vercel •
+            An Embody Product
           </p>
         </footer>
       </div>
