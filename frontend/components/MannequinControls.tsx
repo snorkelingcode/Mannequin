@@ -94,20 +94,65 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
     feet: 1.0
   })
 
-  // Morph targets state
+  // Morph targets state - ONLY actual codes from hooks.txt
   const [morphTargets, setMorphTargets] = useState({
     // Head
-    headTop: 0.0,
-    headSides: 0.0,
-    headBack: 0.0,
-    headBackWidth: 0.0,
-    // Face
-    eyeWidth: 0.0,
-    eyeHeight: 0.0,
-    noseWidth: 0.0,
-    noseLength: 0.0,
-    lipsWidth: 0.0,
-    chinLength: 0.0
+    headTop: 0.0,           // MTHT
+    headSides: 0.0,         // MTHS
+    headBack: 0.0,          // MTHB
+    headBackWidth: 0.0,     // MTHBW
+    // Neck
+    neckFrontTop: 0.0,      // MTNFT
+    neckFront: 0.0,         // MTNF
+    neckSides: 0.0,         // MTNS
+    neckBackHigh: 0.0,      // MTNBH
+    neckBackLow: 0.0,       // MTNBL
+    neckDefinition: 0.0,    // MTND
+    // Ears
+    earWidth: 0.0,          // MTEW
+    earPoint: 0.0,          // MTEP
+    earlobe: 0.0,           // MTEL
+    earSize: 0.0,           // MTERS
+    // Forehead/Temples
+    foreheadCenter: 0.0,    // MTFHC
+    foreheadCurvature: 0.0, // MTFHCR
+    foreheadSides: 0.0,     // MTFHS
+    temples: 0.0,           // MTT
+    // Eyebrows
+    eyebrowHeight: 0.0,     // MTEBH
+    eyebrowWidth: 0.0,      // MTEBW
+    eyebrowArch: 0.0,       // MTEBA
+    // Eyes
+    eyeCavity: 0.0,         // MTEC
+    eyeWidth: 0.0,          // MTEYW
+    eyeBags: 0.0,           // MTEB
+    eyeHeight: 0.0,         // MTEYH
+    // Nose
+    noseBase: 0.0,          // MTNB
+    noseLength: 0.0,        // MTNL
+    noseWidth: 0.0,         // MTNW
+    nostril: 0.0,           // MTN
+    septum: 0.0,            // MTS
+    noseCrookedness: 0.0,   // MTNCR
+    // Cheeks
+    cheekBone: 0.0,         // MTCB
+    cheekTissue: 0.0,       // MTCT
+    cheekDefinition: 0.0,   // MTCD
+    // Lips
+    lipsOuter: 0.0,         // MTLO
+    lipsWidth: 0.0,         // MTLW
+    lipsOverlap: 0.0,       // MTLOV
+    lipsCurve: 0.0,         // MTLCV
+    lipsDepth: 0.0,         // MTLD
+    lipsUnderlap: 0.0,      // MTLU
+    // Chin/Jaw
+    chinLength: 0.0,        // MCL
+    chinPoint: 0.0,         // MTCP
+    chinWidth: 0.0,         // MTCW
+    jawLower: 0.0,          // MTJL
+    jawHigher: 0.0,         // MTJH
+    // Other
+    horns: 0.0              // MTH
   })
   
   // Character info
@@ -142,7 +187,8 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
   
   const handleSkinToneChange = async (value: number) => {
     setSkinTone(value)
-    await sendCommand(`SKIN_${value.toFixed(2)}`)
+    // Use hooks.txt format: SKC.Float
+    await sendCommand(`SKC_${value.toFixed(2)}`)
   }
   
   const handleHairColorChange = async (color: 'r' | 'g' | 'b', value: number) => {
@@ -154,8 +200,22 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
   
   const handleBoneSizeChange = async (bone: string, value: number) => {
     setBoneSizes(prev => ({ ...prev, [bone]: value }))
-    const boneKey = bone.charAt(0).toUpperCase() + bone.slice(1)
-    await sendCommand(`BONE.${boneKey}_${value.toFixed(2)}`)
+    
+    // Map bone names to ACTUAL hooks.txt bone codes
+    const boneMap: { [key: string]: string } = {
+      head: 'BNH',     // BNH.Float - Head size
+      chest: 'BNC',    // BNC.Float - Chest size  
+      hand: 'BNHD',    // BNHD.Float - Hand size
+      abdomen: 'BNA',  // BNA.Float - Abdomen size
+      arm: 'BNAR',     // BNAR.Float - Arm size
+      leg: 'BNL',      // BNL.Float - Leg size
+      feet: 'BNF'      // BNF.Float - Feet size
+    }
+    
+    const boneCode = boneMap[bone]
+    if (boneCode) {
+      await sendCommand(`${boneCode}_${value.toFixed(2)}`)
+    }
   }
 
   const handleEyeColorChange = async (value: number) => {
@@ -173,18 +233,65 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
   const handleMorphTargetChange = async (morphType: string, value: number) => {
     setMorphTargets(prev => ({ ...prev, [morphType]: value }))
     
-    // Map frontend names to hooks.txt morph codes
+    // Map frontend names to ACTUAL hooks.txt morph codes
     const morphMap: { [key: string]: string } = {
+      // Head
       headTop: 'MTHT',
-      headSides: 'MTHS', 
+      headSides: 'MTHS',
       headBack: 'MTHB',
       headBackWidth: 'MTHBW',
+      // Neck
+      neckFrontTop: 'MTNFT',
+      neckFront: 'MTNF',
+      neckSides: 'MTNS',
+      neckBackHigh: 'MTNBH',
+      neckBackLow: 'MTNBL',
+      neckDefinition: 'MTND',
+      // Ears
+      earWidth: 'MTEW',
+      earPoint: 'MTEP',
+      earlobe: 'MTEL',
+      earSize: 'MTERS',
+      // Forehead/Temples
+      foreheadCenter: 'MTFHC',
+      foreheadCurvature: 'MTFHCR',
+      foreheadSides: 'MTFHS',
+      temples: 'MTT',
+      // Eyebrows
+      eyebrowHeight: 'MTEBH',
+      eyebrowWidth: 'MTEBW',
+      eyebrowArch: 'MTEBA',
+      // Eyes
+      eyeCavity: 'MTEC',
       eyeWidth: 'MTEYW',
+      eyeBags: 'MTEB',
       eyeHeight: 'MTEYH',
-      noseWidth: 'MTNW',
+      // Nose
+      noseBase: 'MTNB',
       noseLength: 'MTNL',
+      noseWidth: 'MTNW',
+      nostril: 'MTN',
+      septum: 'MTS',
+      noseCrookedness: 'MTNCR',
+      // Cheeks
+      cheekBone: 'MTCB',
+      cheekTissue: 'MTCT',
+      cheekDefinition: 'MTCD',
+      // Lips
+      lipsOuter: 'MTLO',
       lipsWidth: 'MTLW',
-      chinLength: 'MCL'
+      lipsOverlap: 'MTLOV',
+      lipsCurve: 'MTLCV',
+      lipsDepth: 'MTLD',
+      lipsUnderlap: 'MTLU',
+      // Chin/Jaw
+      chinLength: 'MCL',
+      chinPoint: 'MTCP',
+      chinWidth: 'MTCW',
+      jawLower: 'MTJL',
+      jawHigher: 'MTJH',
+      // Other
+      horns: 'MTH'
     }
     
     const morphCode = morphMap[morphType]
@@ -215,8 +322,192 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
   
   return (
     <div className="space-y-6">
+      {/* Camera Controls */}
+      <CollapsibleSection title="📹 Camera & Position" defaultOpen={true}>
+        <div className="space-y-6">
+          {/* Camera Position */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Camera Position</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <SliderControl
+                label="X Position"
+                value={cameraPos.x}
+                onChange={(value) => handleCameraUpdate('x', value)}
+                min={-500}
+                max={500}
+                step={1}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Y Position" 
+                value={cameraPos.y}
+                onChange={(value) => handleCameraUpdate('y', value)}
+                min={-500}
+                max={500}
+                step={1}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Z Position"
+                value={cameraPos.z}
+                onChange={(value) => handleCameraUpdate('z', value)}
+                min={-500}
+                max={500}
+                step={1}
+                disabled={!isConnected}
+              />
+            </div>
+          </div>
+
+          {/* Camera Rotation */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Camera Rotation</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <SliderControl
+                label="X Rotation"
+                value={cameraRot.rx}
+                onChange={(value) => handleCameraUpdate('rx', value)}
+                min={-180}
+                max={180}
+                step={1}
+                unit="°"
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Y Rotation"
+                value={cameraRot.ry}
+                onChange={(value) => handleCameraUpdate('ry', value)}
+                min={-180}
+                max={180}
+                step={1}
+                unit="°"
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Z Rotation"
+                value={cameraRot.rz}
+                onChange={(value) => handleCameraUpdate('rz', value)}
+                min={-180}
+                max={180}
+                step={1}
+                unit="°"
+                disabled={!isConnected}
+              />
+            </div>
+          </div>
+
+          {/* Camera Presets */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Camera Presets</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {[
+                { label: 'Default', cmd: 'CAMSHOT.Default' },
+                { label: 'Extreme Close', cmd: 'CAMSHOT.ExtremeClose' },
+                { label: 'Close', cmd: 'CAMSHOT.Close' },
+                { label: 'High Angle', cmd: 'CAMSHOT.HighAngle' },
+                { label: 'Low Angle', cmd: 'CAMSHOT.LowAngle' },
+                { label: 'Medium', cmd: 'CAMSHOT.Medium' },
+                { label: 'Mobile Medium', cmd: 'CAMSHOT.MobileMedium' },
+                { label: 'Wide Shot', cmd: 'CAMSHOT.WideShot' },
+                { label: 'Mobile Wide', cmd: 'CAMSHOT.MobileWideShot' }
+              ].map(({ label, cmd }) => (
+                <button
+                  key={cmd}
+                  onClick={() => sendCommand(cmd)}
+                  disabled={!isConnected}
+                  className="btn-secondary text-xs py-2"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* View Controls */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">View Controls</h4>
+            <div className="flex gap-2">
+              <button
+                onClick={() => sendCommand('View.Desktop')}
+                disabled={!isConnected}
+                className="btn-secondary"
+              >
+                Desktop View
+              </button>
+              <button
+                onClick={() => sendCommand('View.Mobile')}
+                disabled={!isConnected}
+                className="btn-secondary"
+              >
+                Mobile View
+              </button>
+              <button
+                onClick={resetCamera}
+                disabled={!isConnected}
+                className="btn-primary"
+              >
+                Reset Camera
+              </button>
+            </div>
+          </div>
+
+          {/* Continuous Update Toggle */}
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-dark-300">Continuous Camera Update</label>
+            <input
+              type="checkbox"
+              checked={continuousUpdate}
+              onChange={(e) => setContinuousUpdate(e.target.checked)}
+              className="form-checkbox h-4 w-4 text-primary-500"
+            />
+          </div>
+        </div>
+      </CollapsibleSection>
       
-      
+      {/* Character Management */}
+      <CollapsibleSection title="👤 Character Management">
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={characterName}
+              onChange={(e) => setCharacterName(e.target.value)}
+              placeholder="Character name..."
+              className="flex-1 px-3 py-2 bg-dark-800 border border-dark-600 rounded-lg text-white"
+            />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <button
+              onClick={() => handleCharacterAction('new')}
+              disabled={!isConnected}
+              className="btn-primary"
+            >
+              New Character
+            </button>
+            <button
+              onClick={() => handleCharacterAction('save')}
+              disabled={!isConnected}
+              className="btn-secondary"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => handleCharacterAction('load')}
+              disabled={!isConnected}
+              className="btn-secondary"
+            >
+              Load
+            </button>
+            <button
+              onClick={() => handleCharacterAction('delete')}
+              disabled={!isConnected}
+              className="btn-danger"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </CollapsibleSection>
       
       {/* Appearance Customization */}
       <CollapsibleSection title="✨ Appearance" defaultOpen={true}>
@@ -451,105 +742,280 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
         </div>
       </CollapsibleSection>
       
-      {/* Morph Targets */}
+      {/* Bone Sizes */}
+      <CollapsibleSection title="🦴 Bone Sizes">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.entries(boneSizes).map(([bone, value]) => (
+            <SliderControl
+              key={bone}
+              label={bone.charAt(0).toUpperCase() + bone.slice(1)}
+              value={value}
+              onChange={(newValue) => handleBoneSizeChange(bone, newValue)}
+              min={0.1}
+              max={3.0}
+              step={0.01}
+              disabled={!isConnected}
+            />
+          ))}
+        </div>
+      </CollapsibleSection>
+
+      {/* Morph Targets - All actual hooks.txt morphs */}
       <CollapsibleSection title="🎭 Morph Targets">
         <div className="space-y-6">
-          {/* Head Morphs */}
+          {/* Head Structure */}
           <div>
             <h4 className="text-lg font-semibold text-white mb-3">Head Structure</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SliderControl
-                label="Head Top"
-                value={morphTargets.headTop}
-                onChange={(value) => handleMorphTargetChange('headTop', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Head Sides"
-                value={morphTargets.headSides}
-                onChange={(value) => handleMorphTargetChange('headSides', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Head Back"
-                value={morphTargets.headBack}
-                onChange={(value) => handleMorphTargetChange('headBack', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Head Back Width"
-                value={morphTargets.headBackWidth}
-                onChange={(value) => handleMorphTargetChange('headBackWidth', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
+              {[
+                { key: 'headTop', label: 'Head Top' },
+                { key: 'headSides', label: 'Head Sides' },
+                { key: 'headBack', label: 'Head Back' },
+                { key: 'headBackWidth', label: 'Head Back Width' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
             </div>
           </div>
-          
-          {/* Facial Features */}
+
+          {/* Neck */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Facial Features</h4>
+            <h4 className="text-lg font-semibold text-white mb-3">Neck</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { key: 'neckFrontTop', label: 'Neck Front Top' },
+                { key: 'neckFront', label: 'Neck Front' },
+                { key: 'neckSides', label: 'Neck Sides' },
+                { key: 'neckBackHigh', label: 'Neck Back High' },
+                { key: 'neckBackLow', label: 'Neck Back Low' },
+                { key: 'neckDefinition', label: 'Neck Definition' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Ears */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Ears</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'earWidth', label: 'Ear Width' },
+                { key: 'earPoint', label: 'Ear Point' },
+                { key: 'earlobe', label: 'Earlobe' },
+                { key: 'earSize', label: 'Ear Size' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Forehead/Temples */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Forehead & Temples</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'foreheadCenter', label: 'Forehead Center' },
+                { key: 'foreheadCurvature', label: 'Forehead Curvature' },
+                { key: 'foreheadSides', label: 'Forehead Sides' },
+                { key: 'temples', label: 'Temples' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Eyebrows */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Eyebrows</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { key: 'eyebrowHeight', label: 'Eyebrow Height' },
+                { key: 'eyebrowWidth', label: 'Eyebrow Width' },
+                { key: 'eyebrowArch', label: 'Eyebrow Arch' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Eyes */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Eyes</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'eyeCavity', label: 'Eye Cavity' },
+                { key: 'eyeWidth', label: 'Eye Width' },
+                { key: 'eyeBags', label: 'Eye Bags' },
+                { key: 'eyeHeight', label: 'Eye Height' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Nose */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Nose</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { key: 'noseBase', label: 'Nose Base' },
+                { key: 'noseLength', label: 'Nose Length' },
+                { key: 'noseWidth', label: 'Nose Width' },
+                { key: 'nostril', label: 'Nostril' },
+                { key: 'septum', label: 'Septum' },
+                { key: 'noseCrookedness', label: 'Nose Crookedness' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Cheeks */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Cheeks</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { key: 'cheekBone', label: 'Cheek Bone' },
+                { key: 'cheekTissue', label: 'Cheek Tissue' },
+                { key: 'cheekDefinition', label: 'Cheek Definition' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Lips */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Lips</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { key: 'lipsOuter', label: 'Lips Outer' },
+                { key: 'lipsWidth', label: 'Lips Width' },
+                { key: 'lipsOverlap', label: 'Lips Overlap' },
+                { key: 'lipsCurve', label: 'Lips Curve' },
+                { key: 'lipsDepth', label: 'Lips Depth' },
+                { key: 'lipsUnderlap', label: 'Lips Underlap' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Chin/Jaw */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Chin & Jaw</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { key: 'chinLength', label: 'Chin Length' },
+                { key: 'chinPoint', label: 'Chin Point' },
+                { key: 'chinWidth', label: 'Chin Width' },
+                { key: 'jawLower', label: 'Jaw Lower' },
+                { key: 'jawHigher', label: 'Jaw Higher' }
+              ].map(({ key, label }) => (
+                <SliderControl
+                  key={key}
+                  label={label}
+                  value={morphTargets[key as keyof typeof morphTargets]}
+                  onChange={(value) => handleMorphTargetChange(key, value)}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  disabled={!isConnected}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Other */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Other</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SliderControl
-                label="Eye Width"
-                value={morphTargets.eyeWidth}
-                onChange={(value) => handleMorphTargetChange('eyeWidth', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Eye Height"
-                value={morphTargets.eyeHeight}
-                onChange={(value) => handleMorphTargetChange('eyeHeight', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Nose Width"
-                value={morphTargets.noseWidth}
-                onChange={(value) => handleMorphTargetChange('noseWidth', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Nose Length"
-                value={morphTargets.noseLength}
-                onChange={(value) => handleMorphTargetChange('noseLength', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Lips Width"
-                value={morphTargets.lipsWidth}
-                onChange={(value) => handleMorphTargetChange('lipsWidth', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-              />
-              <SliderControl
-                label="Chin Length"
-                value={morphTargets.chinLength}
-                onChange={(value) => handleMorphTargetChange('chinLength', value)}
+                label="Horns"
+                value={morphTargets.horns}
+                onChange={(value) => handleMorphTargetChange('horns', value)}
                 min={-1}
                 max={1}
                 step={0.01}

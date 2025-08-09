@@ -473,13 +473,30 @@ class DualStreamBridge:
         
         try:
             while self.running:
-                # Process video frames
-                frame_data = self.frame_receiver.get_frame(timeout=0.0001)  # Ultra-fast frame retrieval
+                # ULTRA-LOW LATENCY: Process frames immediately with smart queue management
+                queue_size = self.frame_receiver.frame_queue.qsize()
                 
-                if frame_data and self.video_streamer:
-                    success = self.video_streamer.send_frame(frame_data)
-                    if success:
-                        video_frames += 1
+                # Smart queue management - keep queue small but don't artificially delay
+                if queue_size > 0:
+                    # If queue is building up (>10 frames), drop some older frames
+                    if queue_size > 10:
+                        # Drop half the queue to prevent massive buildup
+                        frames_to_drop = queue_size // 2
+                        for _ in range(frames_to_drop):
+                            dropped = self.frame_receiver.get_frame(timeout=0.0001)
+                            if not dropped:
+                                break
+                        
+                        if frames_to_drop > 0:
+                            logger.debug(f"Dropped {frames_to_drop} frames - queue was {queue_size}")
+                    
+                    # Process the next available frame immediately (no artificial delays)
+                    frame_data = self.frame_receiver.get_frame(timeout=0.0001)
+                    
+                    if frame_data and self.video_streamer:
+                        success = self.video_streamer.send_frame(frame_data)
+                        if success:
+                            video_frames += 1
                 
                 # Print stats every 5 seconds
                 if time.time() - start_time > 5:
@@ -496,9 +513,17 @@ class DualStreamBridge:
                     logger.info(f"Queue Size: {receiver_stats['frame_queue_size']}")
                     logger.info(f"Memory Est: {receiver_stats['memory_usage_mb']:.1f}MB")
                     
-                    # Memory leak detection
+                    # Enhanced memory leak and queue buildup detection
                     if receiver_stats['incomplete_frames_count'] > 100:
                         logger.warning(f"HIGH INCOMPLETE FRAME COUNT: {receiver_stats['incomplete_frames_count']} - potential latency buildup!")
+                    
+                    if receiver_stats['frame_queue_size'] > 5:
+                        logger.warning(f"QUEUE BUILDUP DETECTED: {receiver_stats['frame_queue_size']} frames queued - should be 0-1 for 1:1 processing!")
+                    
+                    # Alert if frame processing is falling behind
+                    expected_frames = video_stats['fps'] * 5  # 5 second window
+                    if video_frames < expected_frames * 0.9:  # Less than 90% of expected
+                        logger.warning(f"FRAME PROCESSING LAGGING: Expected ~{expected_frames:.0f}, got {video_frames} in last 5s")
                     
                     # Audio status
                     if self.audio_streamer and self.audio_streamer.running:
@@ -511,7 +536,7 @@ class DualStreamBridge:
                     video_frames = 0
                     start_time = time.time()
                 
-                time.sleep(0.0001)  # Minimal delay
+                # No sleep for ultra-low latency - process frames as fast as possible
                 
         except KeyboardInterrupt:
             logger.info("Bridge interrupted by user")
