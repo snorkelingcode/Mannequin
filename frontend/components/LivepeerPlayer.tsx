@@ -31,17 +31,7 @@ export default function LivepeerPlayer({ className = '' }: LivepeerPlayerProps) 
           sandbox="allow-same-origin allow-scripts"
           onLoad={() => setIsStreamLoaded(true)}
         />
-      </div>
-      
-      {/* Status Indicator */}
-      <div className="flex items-center justify-center space-x-3 mb-4">
-        <div className={`w-3 h-3 rounded-full ${isStreamLoaded ? 'bg-green-500 animate-pulse-slow' : 'bg-yellow-500'}`}></div>
-        <span className="text-dark-300">
-          {isStreamLoaded ? 'Stream loaded and ready' : 'Loading stream player...'}
-        </span>
-      </div>
-      
-      
+      </div>      
     </div>
   )
 }
