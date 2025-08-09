@@ -278,9 +278,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
             { label: 'High Angle', cmd: 'CAMSHOT.HighAngle' },
             { label: 'Low Angle', cmd: 'CAMSHOT.LowAngle' },
             { label: 'Medium', cmd: 'CAMSHOT.Medium' },
-            { label: 'Mobile Medium', cmd: 'CAMSHOT.MobileMedium' },
-            { label: 'Wide Shot', cmd: 'CAMSHOT.WideShot' },
-            { label: 'Mobile Wide', cmd: 'CAMSHOT.MobileWideShot' }
+            { label: 'Wide Shot', cmd: 'CAMSHOT.WideShot' }
           ].map(({ label, cmd }) => (
             <button
               key={cmd}
@@ -293,20 +291,13 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           ))}
         </div>
         
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4">
           <button
             onClick={() => sendCommand('View.Desktop')}
             disabled={!isConnected}
             className="btn-secondary"
           >
             Desktop View
-          </button>
-          <button
-            onClick={() => sendCommand('View.Mobile')}
-            disabled={!isConnected}
-            className="btn-secondary"
-          >
-            Mobile View
           </button>
         </div>
       </CollapsibleSection>
