@@ -22,7 +22,7 @@
   }
   
   .card {
-    @apply bg-dark-800/50 backdrop-blur-sm border border-dark-700 rounded-xl p-6 shadow-lg;
+    @apply bg-dark-800/50 backdrop-blur-sm border border-dark-700 rounded-xl pt-6 pr-6 pl-6 pb-0 shadow-lg;
   }
   
   .slider-input {
