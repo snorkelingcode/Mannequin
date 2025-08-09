@@ -93,6 +93,22 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
     leg: 1.0,
     feet: 1.0
   })
+
+  // Morph targets state
+  const [morphTargets, setMorphTargets] = useState({
+    // Head
+    headTop: 0.0,
+    headSides: 0.0,
+    headBack: 0.0,
+    headBackWidth: 0.0,
+    // Face
+    eyeWidth: 0.0,
+    eyeHeight: 0.0,
+    noseWidth: 0.0,
+    noseLength: 0.0,
+    lipsWidth: 0.0,
+    chinLength: 0.0
+  })
   
   // Character info
   const [characterName, setCharacterName] = useState('Lucy')
@@ -132,13 +148,49 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
   const handleHairColorChange = async (color: 'r' | 'g' | 'b', value: number) => {
     const newColor = { ...hairColor, [color]: value }
     setHairColor(newColor)
-    await sendCommand(`HAIR.${color.toUpperCase()}_${value.toFixed(2)}`)
+    // Use hooks.txt format: HCR.Float, HCG.Float, HCB.Float
+    await sendCommand(`HC${color.toUpperCase()}_${value.toFixed(2)}`)
   }
   
   const handleBoneSizeChange = async (bone: string, value: number) => {
     setBoneSizes(prev => ({ ...prev, [bone]: value }))
     const boneKey = bone.charAt(0).toUpperCase() + bone.slice(1)
     await sendCommand(`BONE.${boneKey}_${value.toFixed(2)}`)
+  }
+
+  const handleEyeColorChange = async (value: number) => {
+    setEyeColor(value)
+    // Use hooks.txt format: EC.Float
+    await sendCommand(`EC_${value.toFixed(2)}`)
+  }
+
+  const handleEyeSaturationChange = async (value: number) => {
+    setEyeSaturation(value)
+    // Use hooks.txt format: ES.Float
+    await sendCommand(`ES_${value.toFixed(1)}`)
+  }
+
+  const handleMorphTargetChange = async (morphType: string, value: number) => {
+    setMorphTargets(prev => ({ ...prev, [morphType]: value }))
+    
+    // Map frontend names to hooks.txt morph codes
+    const morphMap: { [key: string]: string } = {
+      headTop: 'MTHT',
+      headSides: 'MTHS', 
+      headBack: 'MTHB',
+      headBackWidth: 'MTHBW',
+      eyeWidth: 'MTEYW',
+      eyeHeight: 'MTEYH',
+      noseWidth: 'MTNW',
+      noseLength: 'MTNL',
+      lipsWidth: 'MTLW',
+      chinLength: 'MCL'
+    }
+    
+    const morphCode = morphMap[morphType]
+    if (morphCode) {
+      await sendCommand(`${morphCode}_${value.toFixed(2)}`)
+    }
   }
   
   const handleCharacterAction = async (action: string) => {
@@ -273,7 +325,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
               <SliderControl
                 label="Eye Color"
                 value={eyeColor}
-                onChange={(value) => setEyeColor(value)}
+                onChange={handleEyeColorChange}
                 min={0}
                 max={1}
                 step={0.01}
@@ -282,7 +334,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
               <SliderControl
                 label="Eye Saturation"
                 value={eyeSaturation}
-                onChange={(value) => setEyeSaturation(value)}
+                onChange={handleEyeSaturationChange}
                 min={0}
                 max={200}
                 step={1}
@@ -348,6 +400,13 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 💃 Dance
               </button>
               <button
+                onClick={() => sendCommand('ANIM.Mannequin')}
+                disabled={!isConnected}
+                className="btn-secondary"
+              >
+                🧍 Mannequin Pose
+              </button>
+              <button
                 onClick={() => sendCommand('startspeaking')}
                 disabled={!isConnected}
                 className="btn-secondary"
@@ -387,6 +446,115 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   {label}
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      </CollapsibleSection>
+      
+      {/* Morph Targets */}
+      <CollapsibleSection title="🎭 Morph Targets">
+        <div className="space-y-6">
+          {/* Head Morphs */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Head Structure</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SliderControl
+                label="Head Top"
+                value={morphTargets.headTop}
+                onChange={(value) => handleMorphTargetChange('headTop', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Head Sides"
+                value={morphTargets.headSides}
+                onChange={(value) => handleMorphTargetChange('headSides', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Head Back"
+                value={morphTargets.headBack}
+                onChange={(value) => handleMorphTargetChange('headBack', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Head Back Width"
+                value={morphTargets.headBackWidth}
+                onChange={(value) => handleMorphTargetChange('headBackWidth', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+            </div>
+          </div>
+          
+          {/* Facial Features */}
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-3">Facial Features</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <SliderControl
+                label="Eye Width"
+                value={morphTargets.eyeWidth}
+                onChange={(value) => handleMorphTargetChange('eyeWidth', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Eye Height"
+                value={morphTargets.eyeHeight}
+                onChange={(value) => handleMorphTargetChange('eyeHeight', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Nose Width"
+                value={morphTargets.noseWidth}
+                onChange={(value) => handleMorphTargetChange('noseWidth', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Nose Length"
+                value={morphTargets.noseLength}
+                onChange={(value) => handleMorphTargetChange('noseLength', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Lips Width"
+                value={morphTargets.lipsWidth}
+                onChange={(value) => handleMorphTargetChange('lipsWidth', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
+              <SliderControl
+                label="Chin Length"
+                value={morphTargets.chinLength}
+                onChange={(value) => handleMorphTargetChange('chinLength', value)}
+                min={-1}
+                max={1}
+                step={0.01}
+                disabled={!isConnected}
+              />
             </div>
           </div>
         </div>

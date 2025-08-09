@@ -32,13 +32,14 @@ class SimpleFrameReceiver:
         self.port = port
         self.socket = None
         self.running = False
-        self.frame_queue = queue.Queue(maxsize=30)
+        self.frame_queue = queue.Queue(maxsize=50)  # Increased for better buffering
         self.receive_thread = None
         
-        # Frame reconstruction
+        # Frame reconstruction with memory leak protection
         self.incomplete_frames = {}
-        self.frame_timeout = 2.0
+        self.frame_timeout = 1.0  # Reduced from 2.0s for lower latency
         self.last_cleanup = time.time()
+        self.max_incomplete_frames = 200  # Hard limit to prevent memory leaks
         
         # Statistics
         self.frames_received = 0
@@ -78,7 +79,7 @@ class SimpleFrameReceiver:
                     
                 # Cleanup expired frames
                 current_time = time.time()
-                if current_time - self.last_cleanup > 1.0:
+                if current_time - self.last_cleanup > 0.5:  # More frequent cleanup
                     self._cleanup_incomplete_frames(current_time)
                     self.last_cleanup = current_time
                     
@@ -87,7 +88,7 @@ class SimpleFrameReceiver:
             except Exception as e:
                 if self.running:
                     logger.error(f"Frame receive error: {e}")
-                    time.sleep(0.001)
+                    time.sleep(0.0001)  # Reduced sleep for lower latency
         
         logger.info("Frame receive loop stopped")
     
@@ -105,8 +106,12 @@ class SimpleFrameReceiver:
                 
             payload = data[8:8+payload_size]
             
-            # Initialize frame tracking
+            # Initialize frame tracking with memory protection
             if frame_id not in self.incomplete_frames:
+                # Aggressive cleanup if too many incomplete frames (prevents memory leaks)
+                if len(self.incomplete_frames) >= self.max_incomplete_frames:
+                    self._aggressive_cleanup()
+                
                 self.incomplete_frames[frame_id] = {
                     'chunks': {},
                     'total_chunks': total_chunks,
@@ -153,7 +158,29 @@ class SimpleFrameReceiver:
             del self.incomplete_frames[frame_id]
             self.frames_dropped += 1
     
-    def get_frame(self, timeout=0.001):
+    def _aggressive_cleanup(self):
+        """Aggressive cleanup to prevent memory leaks and latency buildup"""
+        # Sort by timestamp and keep only the newest frames
+        if len(self.incomplete_frames) >= self.max_incomplete_frames:
+            sorted_frames = sorted(
+                self.incomplete_frames.items(), 
+                key=lambda x: x[1]['timestamp'], 
+                reverse=True
+            )
+            
+            # Keep only the newest 75% of frames (less aggressive)
+            frames_to_keep = sorted_frames[:int(self.max_incomplete_frames * 0.75)]
+            frames_to_drop = len(self.incomplete_frames) - len(frames_to_keep)
+            
+            # Clear and rebuild with only recent frames
+            self.incomplete_frames.clear()
+            for frame_id, frame_info in frames_to_keep:
+                self.incomplete_frames[frame_id] = frame_info
+            
+            self.frames_dropped += frames_to_drop
+            logger.warning(f"Aggressive cleanup: dropped {frames_to_drop} incomplete frames to prevent memory leak")
+    
+    def get_frame(self, timeout=0.0001):  # Reduced timeout for lower latency
         """Get next complete frame"""
         try:
             frame = self.frame_queue.get(timeout=timeout)
@@ -175,7 +202,10 @@ class SimpleFrameReceiver:
             'frames_completed': self.frames_completed,
             'frames_received': self.frames_received,
             'frames_dropped': self.frames_dropped,
-            'success_rate': success_rate
+            'success_rate': success_rate,
+            'incomplete_frames_count': len(self.incomplete_frames),
+            'frame_queue_size': self.frame_queue.qsize(),
+            'memory_usage_mb': len(self.incomplete_frames) * 0.1  # Rough estimate
         }
     
     def stop(self):
@@ -369,7 +399,7 @@ class RawAudioStreamer:
                             logger.error(f"Audio feed error: {e}")
                         break
             
-            time.sleep(0.001)  # Minimal delay
+            time.sleep(0.0001)  # Ultra-minimal delay for low latency
         
         logger.info("Audio feed loop stopped")
     
@@ -444,7 +474,7 @@ class DualStreamBridge:
         try:
             while self.running:
                 # Process video frames
-                frame_data = self.frame_receiver.get_frame(timeout=0.001)
+                frame_data = self.frame_receiver.get_frame(timeout=0.0001)  # Ultra-fast frame retrieval
                 
                 if frame_data and self.video_streamer:
                     success = self.video_streamer.send_frame(frame_data)
@@ -462,6 +492,13 @@ class DualStreamBridge:
                     logger.info(f"Video Success Rate: {video_stats['success_rate']:.1f}%")
                     logger.info(f"Video FPS: {video_stats['fps']:.1f}")
                     logger.info(f"Frames Sent: {video_stats['frames_sent']}")
+                    logger.info(f"Incomplete Frames: {receiver_stats['incomplete_frames_count']}")
+                    logger.info(f"Queue Size: {receiver_stats['frame_queue_size']}")
+                    logger.info(f"Memory Est: {receiver_stats['memory_usage_mb']:.1f}MB")
+                    
+                    # Memory leak detection
+                    if receiver_stats['incomplete_frames_count'] > 100:
+                        logger.warning(f"HIGH INCOMPLETE FRAME COUNT: {receiver_stats['incomplete_frames_count']} - potential latency buildup!")
                     
                     # Audio status
                     if self.audio_streamer and self.audio_streamer.running:

@@ -105,7 +105,7 @@ class ProductionFrameReceiver:
                 if self.running:
                     logger.error(f"Frame receive error: {e}")
                     # Don't break - keep trying for bulletproof reliability
-                    time.sleep(0.001)
+                    time.sleep(0.0001)  # Reduced sleep for lower latency
         
         logger.info("Frame receive loop stopped")
     
@@ -221,7 +221,7 @@ class ProductionFrameReceiver:
                     # Wait for exact timing - ultra-stable 20fps
                     sleep_time = self.target_frame_interval - elapsed
                     if sleep_time > 0:
-                        time.sleep(min(sleep_time, 0.05))  # Max 50ms delay for 20fps
+                        time.sleep(min(sleep_time, 0.01))  # Reduced max delay to 10ms
                         
             # Output buffered frame for smooth delivery
             if self.frame_buffer:
@@ -296,8 +296,8 @@ class OptimizedRTMPStreamer:
             
             # Ultra-stable encoding pipeline - prioritize consistent bitrate
             '-c:v', 'libx264',
-            '-preset', 'fast',           # Faster than veryfast for more consistent timing
-            '-tune', 'film',             # Better for smooth motion (instead of zerolatency)
+            '-preset', 'ultrafast',      # Ultra-fast encoding for minimum latency
+            '-tune', 'zerolatency',      # Ultra-low latency encoding
             '-crf', '30',                # Even higher CRF for ultra-stable bitrate
             '-maxrate', '1200k',         # Further reduced max bitrate
             '-bufsize', '600k',          # Smaller buffer for faster response
@@ -416,7 +416,7 @@ class OptimizedRTMPStreamer:
                 # Precise sleep to maintain exact 20fps timing
                 sleep_time = target_interval - elapsed
                 if sleep_time > 0:
-                    time.sleep(min(sleep_time, 0.05))  # Max 50ms sleep for 20fps
+                    time.sleep(min(sleep_time, 0.01))  # Reduced max sleep to 10ms
         
         self.last_frame_time = current_time
         
@@ -516,7 +516,7 @@ class ProductionWebRTCBridge:
                     self._log_statistics()
                     self.last_stats_time = current_time
                 
-                time.sleep(0.001)  # Minimal delay
+                time.sleep(0.0001)  # Ultra-minimal delay for low latency
                 
         except KeyboardInterrupt:
             logger.info("Bridge interrupted by user")

@@ -1,0 +1,151 @@
+TCP Controller Documentation
+Load/Save System
+NEW.Character - Creates a new character and resets all values back to default (Lucy).
+NAME.Lucy - Replace Lucy with your name.
+BTN.Save - Saves your customization options.
+Load.Lucy - Replace Lucy with your desired agent’s name. This loads a specific agent customization save.
+Delete.Lucy - This deletes a specified agent customization save. Replace Lucy with your desired agent’s name.
+Metahuman Customization
+Presets
+PRS.Masc - Masculine A preset.
+PRS.Masc1 - Masculine B preset.
+PRS.Fem - Feminine A preset.
+PRS.Fem1 - Feminine B preset.
+Outfits
+OF.Default - Default outfit based on preset.
+OF.MaidDress - Maid dress for feminine agents.
+OF.PopStar - Popstar outfit for feminine agents.
+OF.Kimono - Kimono outfit for feminine agents.
+OF.BlackDress - Black dress for feminine agents.
+OF.SpaceSuit - Spacesuit.
+Hair Styles
+HS.Default - Sets the preset default hair style.
+HS.Buzz - Buzz cut hair style.
+HS.Crop - Buzz crop hair style.
+Skin
+SKC.Float - Sets the skin tone. Use floats between 0.3 and 1.2.
+Bones
+BNH.Float - Head size.
+BNC.Float - Chest size.
+BNHD.Float - Hand size.
+BNA.Float - Abdomen size.
+BNAR.Float - Arm size.
+BNL.Float - Leg size.
+BNF.Float - Feet size.
+Hair Color
+HCR.Float - Hair red component (0-1).
+HCG.Float - Hair green component (0-1).
+HCB.Float - Hair blue component (0-1).
+Eyes
+EC.Float - Eye color.
+ES.Float - Eye saturation (values above 100 are very clear).
+Morph Targets
+Head
+MTHT.Float - Head top (-1 to 1).
+MTHS.Float - Head sides.
+MTHB.Float - Head back.
+MTHBW.Float - Head back width.
+Neck
+MTNFT.Float - Neck front top.
+MTNF.Float - Neck front.
+MTNS.Float - Neck sides.
+MTNBH.Float - Neck back high.
+MTNBL.Float - Neck back low.
+MTND.Float - Neck definition.
+Ears
+MTEW.Float - Ear width.
+MTEP.Float - Ear point.
+MTEL.Float - Earlobe.
+MTERS.Float - Ear size.
+Forehead/Temples
+MTFHC.Float - Forehead center.
+MTFHCR.Float - Forehead curvature.
+MTFHS.Float - Forehead sides.
+MTT.Float - Temples.
+Eyebrows
+MTEBH.Float - Eyebrow height.
+MTEBW.Float - Eyebrow width.
+MTEBA.Float - Eyebrow arch.
+Eyes
+MTEC.Float - Eye cavity.
+MTEYW.Float - Eye width.
+MTEB.Float - Eye bags.
+MTEYH.Float - Eye height.
+Nose
+MTNB.Float - Nose base.
+MTNL.Float - Nose length.
+MTNW.Float - Nose width.
+MTN.Float - Nostril.
+MTS.Float - Septum.
+MTNCR.Float - Nose crookedness.
+Cheeks
+MTCB.Float - Cheek bone.
+MTCT.Float - Cheek tissue.
+MTCD.Float - Cheek definition.
+Lips
+MTLO.Float - Lips outer.
+MTLW.Float - Lips width.
+MTLOV.Float - Lips overlap.
+MTLCV.Float - Lips curve.
+MTLD.Float - Lips depth.
+MTLU.Float - Lips underlap.
+Chin/Jaw
+MCL.Float - Chin length.
+MTCP.Float - Chin point.
+MTCW.Float - Chin width.
+MTJL.Float - Jaw lower.
+MTJH.Float - Jaw higher.
+Other
+MTH.Float - Horns.
+Environment - Deprecated
+CLDS.Float - Cloud speed.
+CLDO.Float - Cloud opacity.
+SNH.Float - Sun height.
+STRB.Float - Star brightness.
+Menu - Deprecated
+MENU. - Opens menu.
+CMENU. - Closes menu.
+Game
+QUIT. - Ends game.
+Camera System
+View.Desktop - Aspect ratio for desktop.
+View.Mobile - Aspect ratio for mobile.
+CAMSHOT.Default - Default camera angle.
+CAMSHOT.ExtremeClose - Extreme close camera.
+CAMSHOT.Close - Close camera.
+CAMSHOT.HighAngle - High camera angle.
+CAMSHOT.LowAngle - Low camera angle.
+CAMSHOT.Medium - Medium camera angle.
+CAMSHOT.MobileMedium - Medium for mobile.
+CAMSHOT.WideShot - Wideshot (full body).
+CAMSHOT.MobileWideShot - Wideshot for mobile.
+CAMSTREAM_X_Y_Z_RX_RY_RZ - Camera animation via TCP data stream. (Replace with float values)
+CAMLOC_X_Y_Z - Move agent while camera stays attached.
+LOC_X_Y_Z - Move agent, camera stays.
+ROT_X_Y_Z - Rotate agent without camera attachment.
+Animation System
+startspeaking - Triggered when blendshapes start.
+stopspeaking - Triggered when blendshapes stop.
+FACE.Default - Neutral face.
+FACE.Happy
+FACE.Sad
+FACE.Surprised
+FACE.Fearful
+FACE.Focused
+FACE.Disgusted
+FACE.Childish
+FACE.Tired
+FACE.Annoyed
+FACE.Confused
+FACE.Curious
+FACE.Embarrassed
+FACE.Angry
+FACE.Bored
+FACE.Relaxed
+FACE.Suspicious
+FACE.Proud
+FACE.Pained
+FACE.Nervous
+FACE.Love
+ANIM.Dance
+ANIM.Mannequin - This sets the body animation to be the original SARAH idle body animation.
