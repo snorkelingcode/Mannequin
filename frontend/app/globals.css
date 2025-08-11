@@ -8,11 +8,11 @@
   }
   
   body {
-    @apply bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 text-white min-h-screen;
+    @apply bg-black text-white min-h-screen;
     background-image: 
-      radial-gradient(at 20% 80%, hsla(240, 50%, 20%, 0.15) 0px, transparent 60%),
-      radial-gradient(at 80% 20%, hsla(180, 30%, 25%, 0.1) 0px, transparent 60%),
-      radial-gradient(at 40% 60%, hsla(260, 40%, 18%, 0.12) 0px, transparent 50%);
+      radial-gradient(at 20% 80%, hsla(240, 50%, 5%, 0.3) 0px, transparent 60%),
+      radial-gradient(at 80% 20%, hsla(180, 30%, 8%, 0.2) 0px, transparent 60%),
+      radial-gradient(at 40% 60%, hsla(260, 40%, 6%, 0.25) 0px, transparent 50%);
   }
 }
 
