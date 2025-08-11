@@ -33,14 +33,14 @@ const VALID_COMMAND_PATTERNS = [
     /^PRS\.(Masc|Masc1|Fem|Fem1)$/,
     /^OF\.(Default|MaidDress|PopStar|Kimono|BlackDress|SpaceSuit|ANIME)$/,
     /^HS\.(Default|Buzz|Crop)$/,
-    /^SKIN_[0-9.]+$/,
-    /^SKC_[0-9.]+$/,  // Alternative skin command from hooks.txt
+    /^SKIN.[0-9.]+$/,
+    /^SKC.[0-9.]+$/,  // Alternative skin command from hooks.txt
     /^BONE\.(Head|Chest|Hand|Abdomen|Arm|Leg|Feet)_[0-9.]+$/,
-    /^BN(H|C|HD|A|AR|L|F)_[0-9.]+$/,  // Alternative bone commands from hooks.txt
-    /^HAIR\.(Red|Green|Blue)_[0-9.]+$/,
-    /^HC(R|G|B)_[0-9.]+$/,  // Hair color RGB components from hooks.txt
-    /^EYE\.(Color|Saturation)_[0-9.]+$/,
-    /^E(C|S)_[0-9.]+$/,  // Alternative eye commands from hooks.txt
+    /^BN(H|C|HD|A|AR|L|F).[0-9.]+$/,  // Alternative bone commands from hooks.txt
+    /^HAIR\.(Red|Green|Blue).[0-9.]+$/,
+    /^HC(R|G|B).[0-9.]+$/,  // Hair color RGB components from hooks.txt
+    /^EYE\.(Color|Saturation).[0-9.]+$/,
+    /^E(C|S).[0-9.]+$/,  // Alternative eye commands from hooks.txt
     /^FACE\.(Default|Happy|Sad|Surprised|Fearful|Focused|Disgusted|Childish|Tired|Annoyed|Confused|Curious|Embarrassed|Angry|Bored|Relaxed|Suspicious|Proud|Pained|Nervous|Love)$/,
     /^ANIM\.(Dance|Mannequin)$/,
     /^(startspeaking|stopspeaking)$/,
@@ -49,17 +49,17 @@ const VALID_COMMAND_PATTERNS = [
     /^QUIT\.$/,
     /^MORPH\.\w+_[-\d.]+$/,
     // Comprehensive morph target patterns from hooks.txt
-    /^MT(HT|HS|HB|HBW)_[-\d.]+$/,  // Head morph targets
-    /^MT(NFT|NF|NS|NBH|NBL|ND)_[-\d.]+$/,  // Neck morph targets  
-    /^MT(EW|EP|EL|ERS)_[-\d.]+$/,  // Ear morph targets
-    /^MT(FHC|FHCR|FHS|T)_[-\d.]+$/,  // Forehead/Temple morph targets
-    /^MT(EBH|EBW|EBA)_[-\d.]+$/,  // Eyebrow morph targets
-    /^MT(EC|EYW|EB|EYH)_[-\d.]+$/,  // Eye morph targets
-    /^MT(NB|NL|NW|N|S|NCR)_[-\d.]+$/,  // Nose morph targets
-    /^MT(CB|CT|CD)_[-\d.]+$/,  // Cheek morph targets
-    /^MT(LO|LW|LOV|LCV|LD|LU)_[-\d.]+$/,  // Lips morph targets
-    /^M(CL|TCW|TJL|TJH|TH)_[-\d.]+$/,  // Chin/Jaw morph targets
-    /^MTCP_[-\d.]+$/  // Chin point morph target
+    /^MT(HT|HS|HB|HBW).[-\d.]+$/,  // Head morph targets
+    /^MT(NFT|NF|NS|NBH|NBL|ND).[-\d.]+$/,  // Neck morph targets  
+    /^MT(EW|EP|EL|ERS).[-\d.]+$/,  // Ear morph targets
+    /^MT(FHC|FHCR|FHS|T).[-\d.]+$/,  // Forehead/Temple morph targets
+    /^MT(EBH|EBW|EBA).[-\d.]+$/,  // Eyebrow morph targets
+    /^MT(EC|EYW|EB|EYH).[-\d.]+$/,  // Eye morph targets
+    /^MT(NB|NL|NW|N|S|NCR).[-\d.]+$/,  // Nose morph targets
+    /^MT(CB|CT|CD).[-\d.]+$/,  // Cheek morph targets
+    /^MT(LO|LW|LOV|LCV|LD|LU).[-\d.]+$/,  // Lips morph targets
+    /^M(CL|TCW|TJL|TJH|TH).[-\d.]+$/,  // Chin/Jaw morph targets
+    /^MTCP.[-\d.]+$/  // Chin point morph target
 ];
 
 function isValidCommand(command) {
