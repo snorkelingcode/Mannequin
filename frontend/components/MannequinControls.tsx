@@ -106,7 +106,8 @@ function CollapsibleSection({ title, children, defaultOpen = false }: Collapsibl
   )
 }
 
-export default function MannequinControls({ sendCommand, isConnected }: MannequinControlsProps) {
+// Separate component for primary controls (Camera, Appearance, Expressions)
+export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsProps) {
   
   // Character state
   const [skinTone, setSkinTone] = useState(0.75)
@@ -325,7 +326,6 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
             </button>
           ))}
         </div>
-        
       </CollapsibleSection>
       
       {/* Appearance Customization */}
@@ -461,8 +461,176 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           </div>
         </div>
       </CollapsibleSection>
-      
-      
+    </div>
+  )
+}
+
+// Secondary controls component for advanced options
+export function SecondaryControls({ sendCommand, isConnected }: MannequinControlsProps) {
+  // Bone sizes
+  const [boneSizes, setBoneSizes] = useState({
+    head: 1.0,
+    chest: 1.0,
+    hand: 1.0,
+    abdomen: 1.0,
+    arm: 1.0,
+    leg: 1.0,
+    feet: 1.0
+  })
+
+  // Morph targets state - ONLY actual codes from hooks.txt
+  const [morphTargets, setMorphTargets] = useState({
+    // Head
+    headTop: 0.0,           // MTHT
+    headSides: 0.0,         // MTHS
+    headBack: 0.0,          // MTHB
+    headBackWidth: 0.0,     // MTHBW
+    // Neck
+    neckFrontTop: 0.0,      // MTNFT
+    neckFront: 0.0,         // MTNF
+    neckSides: 0.0,         // MTNS
+    neckBackHigh: 0.0,      // MTNBH
+    neckBackLow: 0.0,       // MTNBL
+    neckDefinition: 0.0,    // MTND
+    // Ears
+    earWidth: 0.0,          // MTEW
+    earPoint: 0.0,          // MTEP
+    earlobe: 0.0,           // MTEL
+    earSize: 0.0,           // MTERS
+    // Forehead/Temples
+    foreheadCenter: 0.0,    // MTFHC
+    foreheadCurvature: 0.0, // MTFHCR
+    foreheadSides: 0.0,     // MTFHS
+    temples: 0.0,           // MTT
+    // Eyebrows
+    eyebrowHeight: 0.0,     // MTEBH
+    eyebrowWidth: 0.0,      // MTEBW
+    eyebrowArch: 0.0,       // MTEBA
+    // Eyes
+    eyeCavity: 0.0,         // MTEC
+    eyeWidth: 0.0,          // MTEYW
+    eyeBags: 0.0,           // MTEB
+    eyeHeight: 0.0,         // MTEYH
+    // Nose
+    noseBase: 0.0,          // MTNB
+    noseLength: 0.0,        // MTNL
+    noseWidth: 0.0,         // MTNW
+    nostril: 0.0,           // MTN
+    septum: 0.0,            // MTS
+    noseCrookedness: 0.0,   // MTNCR
+    // Cheeks
+    cheekBone: 0.0,         // MTCB
+    cheekTissue: 0.0,       // MTCT
+    cheekDefinition: 0.0,   // MTCD
+    // Lips
+    lipsOuter: 0.0,         // MTLO
+    lipsWidth: 0.0,         // MTLW
+    lipsOverlap: 0.0,       // MTLOV
+    lipsCurve: 0.0,         // MTLCV
+    lipsDepth: 0.0,         // MTLD
+    lipsUnderlap: 0.0,      // MTLU
+    // Chin/Jaw
+    chinLength: 0.0,        // MCL
+    chinPoint: 0.0,         // MTCP
+    chinWidth: 0.0,         // MTCW
+    jawLower: 0.0,          // MTJL
+    jawHigher: 0.0,         // MTJH
+    // Other
+    horns: 0.0              // MTH
+  })
+
+  const handleBoneSizeChange = async (bone: string, value: number) => {
+    setBoneSizes(prev => ({ ...prev, [bone]: value }))
+    
+    // Map bone names to ACTUAL hooks.txt bone codes
+    const boneMap: { [key: string]: string } = {
+      head: 'BNH',     // BNH.Float - Head size
+      chest: 'BNC',    // BNC.Float - Chest size  
+      hand: 'BNHD',    // BNHD.Float - Hand size
+      abdomen: 'BNA',  // BNA.Float - Abdomen size
+      arm: 'BNAR',     // BNAR.Float - Arm size
+      leg: 'BNL',      // BNL.Float - Leg size
+      feet: 'BNF'      // BNF.Float - Feet size
+    }
+    
+    const boneCode = boneMap[bone]
+    if (boneCode) {
+      await sendCommand(`${boneCode}.${value.toFixed(2)}`)
+    }
+  }
+
+  const handleMorphTargetChange = async (morphType: string, value: number) => {
+    setMorphTargets(prev => ({ ...prev, [morphType]: value }))
+    
+    // Map frontend names to ACTUAL hooks.txt morph codes
+    const morphMap: { [key: string]: string } = {
+      // Head
+      headTop: 'MTHT',
+      headSides: 'MTHS',
+      headBack: 'MTHB',
+      headBackWidth: 'MTHBW',
+      // Neck
+      neckFrontTop: 'MTNFT',
+      neckFront: 'MTNF',
+      neckSides: 'MTNS',
+      neckBackHigh: 'MTNBH',
+      neckBackLow: 'MTNBL',
+      neckDefinition: 'MTND',
+      // Ears
+      earWidth: 'MTEW',
+      earPoint: 'MTEP',
+      earlobe: 'MTEL',
+      earSize: 'MTERS',
+      // Forehead/Temples
+      foreheadCenter: 'MTFHC',
+      foreheadCurvature: 'MTFHCR',
+      foreheadSides: 'MTFHS',
+      temples: 'MTT',
+      // Eyebrows
+      eyebrowHeight: 'MTEBH',
+      eyebrowWidth: 'MTEBW',
+      eyebrowArch: 'MTEBA',
+      // Eyes
+      eyeCavity: 'MTEC',
+      eyeWidth: 'MTEYW',
+      eyeBags: 'MTEB',
+      eyeHeight: 'MTEYH',
+      // Nose
+      noseBase: 'MTNB',
+      noseLength: 'MTNL',
+      noseWidth: 'MTNW',
+      nostril: 'MTN',
+      septum: 'MTS',
+      noseCrookedness: 'MTNCR',
+      // Cheeks
+      cheekBone: 'MTCB',
+      cheekTissue: 'MTCT',
+      cheekDefinition: 'MTCD',
+      // Lips
+      lipsOuter: 'MTLO',
+      lipsWidth: 'MTLW',
+      lipsOverlap: 'MTLOV',
+      lipsCurve: 'MTLCV',
+      lipsDepth: 'MTLD',
+      lipsUnderlap: 'MTLU',
+      // Chin/Jaw
+      chinLength: 'MCL',
+      chinPoint: 'MTCP',
+      chinWidth: 'MTCW',
+      jawLower: 'MTJL',
+      jawHigher: 'MTJH',
+      // Other
+      horns: 'MTH'
+    }
+    
+    const morphCode = morphMap[morphType]
+    if (morphCode) {
+      await sendCommand(`${morphCode}.${value.toFixed(2)}`)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
       {/* Facial Expressions */}
       <CollapsibleSection title="😊 Facial Expressions" defaultOpen={true}>
         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-2">
@@ -862,6 +1030,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 max={1}
                 step={0.01}
                 disabled={!isConnected}
+                usePercentageStep={true}
               />
             </div>
           </div>
@@ -870,4 +1039,9 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
       
     </div>
   )
+}
+
+// Default export for backward compatibility
+export default function MannequinControls({ sendCommand, isConnected }: MannequinControlsProps) {
+  return <PrimaryControls sendCommand={sendCommand} isConnected={isConnected} />
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import LivepeerPlayer from '../components/LivepeerPlayer'
-import MannequinControls from '../components/MannequinControls'
+import { PrimaryControls, SecondaryControls } from '../components/MannequinControls'
 import { useWebSocket } from '../hooks/useWebSocket'
 
 export default function Home() {
@@ -32,23 +32,35 @@ export default function Home() {
         </header>
       
         {/* Main Layout */}
-        <div className={`grid gap-6 ${showControls ? 'lg:grid-cols-2' : 'lg:grid-cols-1'} transition-all duration-300`}>
-          {/* Video Player - Full width when controls are hidden */}
-          <div className={`${showControls ? '' : 'lg:col-span-1 max-w-4xl mx-auto'}`}>
-            <LivepeerPlayer className="h-full" />
-            
-          </div>
-          
-          {/* Controls Panel - Hide when showControls is false */}
-          {showControls && (
+        {showControls ? (
+          <div className="grid gap-6 lg:grid-cols-2 transition-all duration-300">
+            {/* Left Column - Video + Some Controls */}
             <div className="space-y-6">
-              <MannequinControls 
+              <LivepeerPlayer className="w-full" />
+              
+              {/* Primary Controls under video */}
+              <div className="space-y-6">
+                <SecondaryControls 
+                  sendCommand={sendCommand} 
+                  isConnected={isConnected && isAuthenticated} 
+                />
+              </div>
+            </div>
+            
+            {/* Right Column - Main Controls */}
+            <div className="space-y-6">
+              <PrimaryControls 
                 sendCommand={sendCommand} 
                 isConnected={isConnected && isAuthenticated} 
               />
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* Full width video when controls hidden */
+          <div className="max-w-4xl mx-auto">
+            <LivepeerPlayer className="w-full" />
+          </div>
+        )}
         
         {/* Feature Highlights */}
         {!showControls && (
