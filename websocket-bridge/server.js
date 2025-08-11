@@ -47,7 +47,7 @@ const VALID_COMMAND_PATTERNS = [
     /^EMOTE\.\w+$/,
     /^LVL\.(Home|Lofi|DJ|Medieval|Orbit|Split|Split3|Split4|Classroom)$/,
     /^QUIT\.$/,
-    /^MORPH\.\w+_[-\d.]+$/,
+    /^MORPH\.\w+.[-\d.]+$/,
     // Comprehensive morph target patterns from hooks.txt
     /^MT(HT|HS|HB|HBW).[-\d.]+$/,  // Head morph targets
     /^MT(NFT|NF|NS|NBH|NBL|ND).[-\d.]+$/,  // Neck morph targets  

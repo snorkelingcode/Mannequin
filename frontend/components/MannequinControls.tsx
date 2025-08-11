@@ -519,7 +519,13 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 { label: '🤫 Shush', cmd: 'EMOTE.Shushing' },
                 { label: '🙏 Plead', cmd: 'EMOTE.Plead' },
                 { label: '🤔 Ponder', cmd: 'EMOTE.Ponder' },
-                { label: '😤 Show Money', cmd: 'EMOTE.ShowMeTheMoney' }
+                { label: '😤 Show Money', cmd: 'EMOTE.ShowMeTheMoney' },
+                { label: '😤 Middle Finger', cmd: 'EMOTE.MiddleFinger' },
+                { label: '😤 Cooking', cmd: 'EMOTE.Cooking' },
+                { label: '😤 Jorkit', cmd: 'EMOTE.Jorkit' },
+                { label: '😤 Grinding', cmd: 'EMOTE.Grinding' },
+                { label: '😤 Salute', cmd: 'EMOTE.Salute' },
+                { label: '😤 Sizing Big', cmd: 'EMOTE.SizingBig' }
               ].map(({ label, cmd }) => (
                 <button
                   key={cmd}
