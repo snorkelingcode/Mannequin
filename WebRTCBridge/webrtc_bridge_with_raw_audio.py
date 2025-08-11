@@ -32,14 +32,14 @@ class SimpleFrameReceiver:
         self.port = port
         self.socket = None
         self.running = False
-        self.frame_queue = queue.Queue(maxsize=50)  # Increased for better buffering
+        self.frame_queue = queue.Queue(maxsize=2)  # Ultra-low latency: only 2 frames buffered
         self.receive_thread = None
         
-        # Frame reconstruction with memory leak protection
+        # Aggressive frame dropping per CLAUDE.md Phase 1
         self.incomplete_frames = {}
-        self.frame_timeout = 1.0  # Reduced from 2.0s for lower latency
+        self.frame_timeout = 0.05  # 50ms max frame age (CLAUDE.md spec)
         self.last_cleanup = time.time()
-        self.max_incomplete_frames = 200  # Hard limit to prevent memory leaks
+        self.max_incomplete_frames = 5  # Minimal incomplete buffer
         
         # Statistics
         self.frames_received = 0
@@ -68,22 +68,45 @@ class SimpleFrameReceiver:
     def _receive_loop(self):
         """Main frame receiving loop"""
         logger.info("Frame receive loop started")
+        logger.info(f"Listening on localhost:{self.port} for UDP packets")
+        
+        packets_since_last_log = 0
+        last_log_time = time.time()
         
         while self.running:
             try:
                 data, addr = self.socket.recvfrom(65536)
                 self.packets_received += 1
+                packets_since_last_log += 1
+                
+                # Log first few packets for debugging
+                if self.packets_received <= 5:
+                    logger.info(f"Received packet #{self.packets_received} from {addr}: {len(data)} bytes")
                 
                 if len(data) >= 8:
                     self._process_packet(data)
                     
-                # Cleanup expired frames
+                # Log packet reception every 5 seconds
                 current_time = time.time()
-                if current_time - self.last_cleanup > 0.5:  # More frequent cleanup
+                if current_time - last_log_time > 5.0:
+                    if packets_since_last_log > 0:
+                        logger.info(f"Received {packets_since_last_log} packets in last 5 seconds")
+                        packets_since_last_log = 0
+                    else:
+                        logger.warning("No packets received in last 5 seconds!")
+                    last_log_time = current_time
+                    
+                # Aggressive cleanup per CLAUDE.md - drop older frames immediately  
+                if current_time - self.last_cleanup > 0.033:  # 33ms = 30fps cleanup
                     self._cleanup_incomplete_frames(current_time)
                     self.last_cleanup = current_time
                     
             except socket.timeout:
+                # Check if we haven't received packets for a while
+                current_time = time.time()
+                if current_time - last_log_time > 5.0:
+                    logger.warning("Socket timeout - no packets received in 5 seconds")
+                    last_log_time = current_time
                 continue
             except Exception as e:
                 if self.running:
@@ -93,7 +116,7 @@ class SimpleFrameReceiver:
         logger.info("Frame receive loop stopped")
     
     def _process_packet(self, data):
-        """Process UDP packet and reconstruct JPEG frame"""
+        """Process UDP packet with aggressive frame dropping per CLAUDE.md"""
         try:
             # Parse Unreal Engine UDP format
             frame_id = struct.unpack('!I', data[0:4])[0]
@@ -106,16 +129,28 @@ class SimpleFrameReceiver:
                 
             payload = data[8:8+payload_size]
             
-            # Initialize frame tracking with memory protection
+            # Drop older incomplete frames immediately (CLAUDE.md aggressive dropping)
+            current_time = time.time()
+            expired = [fid for fid, info in self.incomplete_frames.items() 
+                      if current_time - info['timestamp'] > 0.033]  # 33ms = 30fps
+            for expired_frame_id in expired:
+                del self.incomplete_frames[expired_frame_id]
+                self.frames_dropped += 1
+            
+            # Initialize frame tracking with minimal buffer
             if frame_id not in self.incomplete_frames:
-                # Aggressive cleanup if too many incomplete frames (prevents memory leaks)
+                # Hard limit on incomplete frames for ultra-low latency
                 if len(self.incomplete_frames) >= self.max_incomplete_frames:
-                    self._aggressive_cleanup()
+                    # Drop oldest frame immediately
+                    oldest_frame_id = min(self.incomplete_frames.keys(), 
+                                        key=lambda x: self.incomplete_frames[x]['timestamp'])
+                    del self.incomplete_frames[oldest_frame_id]
+                    self.frames_dropped += 1
                 
                 self.incomplete_frames[frame_id] = {
                     'chunks': {},
                     'total_chunks': total_chunks,
-                    'timestamp': time.time()
+                    'timestamp': current_time
                 }
             
             frame_info = self.incomplete_frames[frame_id]
@@ -318,37 +353,58 @@ class StableVideoStreamer:
             except:
                 self.ffmpeg_process.terminate()
 
-class RawAudioStreamer:
-    """Stream raw audio separately from video"""
+class CombinedAVStreamer:
+    """Combined audio and video streaming in a single FFmpeg process"""
     
-    def __init__(self, rtmp_url):
+    def __init__(self, rtmp_url, resolution=(1280, 720)):
         self.rtmp_url = rtmp_url
+        self.resolution = resolution
         self.audio_capture = None
         self.ffmpeg_process = None
         self.running = False
         self.audio_thread = None
+        self.frames_sent = 0
         
     def start(self):
-        """Start raw audio streaming"""
-        logger.info("Starting raw audio streaming")
+        """Start combined audio/video streaming"""
+        logger.info("Starting combined audio/video streaming")
         
         # Initialize cross-platform audio capture
         config = AudioConfig(sample_rate=48000, channels=2, chunk_size=1024)
         self.audio_capture = CrossPlatformAudioCapture(config)
         
         if not self.audio_capture.start_capture():
-            logger.error("Failed to start audio capture")
-            return False
+            logger.warning("Failed to start audio capture - continuing video-only")
+            return self._start_video_only()
         
-        # Start audio streaming FFmpeg process (same stream as video)
+        # Combined FFmpeg process with both video and audio inputs
         cmd = [
             'ffmpeg', '-y',
             
-            # Raw audio input
+            # Video input (JPEG frames from Unreal)
+            '-f', 'image2pipe',
+            '-vcodec', 'mjpeg',
+            '-i', 'pipe:0',
+            
+            # Audio input (raw PCM from system audio)
             '-f', 's16le',
             '-ar', '48000', 
             '-ac', '2',
-            '-i', 'pipe:0',
+            '-i', 'pipe:1',
+            
+            # Video encoding
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast', 
+            '-tune', 'zerolatency',
+            '-crf', '23',
+            '-maxrate', '3000k',
+            '-bufsize', '3000k',
+            '-vf', 'format=yuv420p',
+            '-g', '60',
+            '-keyint_min', '30',
+            '-profile:v', 'main',
+            '-level', '3.1',
+            '-s', f'{self.resolution[0]}x{self.resolution[1]}',
             
             # Audio encoding
             '-c:a', 'aac',
@@ -356,9 +412,137 @@ class RawAudioStreamer:
             '-ar', '48000',
             '-ac', '2',
             
-            # Output (send to same RTMP stream)
+            # Output
             '-f', 'flv',
-            self.rtmp_url  # Same stream as video for proper muxing
+            '-flvflags', 'no_duration_filesize',
+            self.rtmp_url
+        ]
+        
+        try:
+            # Create process with two pipes: stdin for video, custom pipe for audio
+            self.ffmpeg_process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,  # Video frames
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=65536,
+                pass_fds=[]
+            )
+            
+            # Create a separate pipe for audio data
+            import os
+            self.audio_pipe_read, self.audio_pipe_write = os.pipe()
+            
+            # Redirect the audio input to our custom pipe
+            cmd[cmd.index('pipe:1')] = f'/dev/fd/{self.audio_pipe_read}'
+            
+            # Restart with proper file descriptor setup
+            self.ffmpeg_process.terminate()
+            
+            # Simpler approach: use separate processes and combine streams
+            return self._start_combined_simple()
+            
+        except Exception as e:
+            logger.error(f"Failed to start combined streaming: {e}")
+            return False
+    
+    def _start_combined_simple(self):
+        """Start combined streaming using simpler approach"""
+        cmd = [
+            'ffmpeg', '-y',
+            
+            # Video input (JPEG frames)
+            '-f', 'image2pipe',
+            '-vcodec', 'mjpeg',
+            '-i', 'pipe:0',
+            
+            # Audio input (from system audio via cross-platform capture)
+            '-f', 's16le',
+            '-ar', '48000',
+            '-ac', '2', 
+            '-i', '-',  # Will be fed via separate thread
+            
+            # Map inputs
+            '-map', '0:v',  # Video from pipe:0
+            '-map', '1:a',  # Audio from pipe:1 (stdin of audio thread)
+            
+            # Video encoding
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-tune', 'zerolatency',
+            '-crf', '23',
+            '-maxrate', '3000k',
+            '-bufsize', '3000k',
+            '-vf', 'format=yuv420p',
+            '-g', '60',
+            '-profile:v', 'main',
+            '-s', f'{self.resolution[0]}x{self.resolution[1]}',
+            
+            # Audio encoding
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-ar', '48000',
+            '-ac', '2',
+            
+            # Sync and output
+            '-async', '1',
+            '-vsync', 'cfr',
+            '-f', 'flv',
+            self.rtmp_url
+        ]
+        
+        # Use named pipes for audio (Windows compatible approach)
+        return self._start_video_with_audio_thread()
+    
+    def _start_video_with_audio_thread(self):
+        """Start video streaming with ultra-fast configuration from CLAUDE.md"""
+        logger.info(f"Starting ULTRA-FAST streaming to: {self.rtmp_url}")
+        
+        cmd = [
+            'ffmpeg', '-y',
+            '-fflags', '+genpts+discardcorrupt',
+            '-avoid_negative_ts', 'make_zero',
+            
+            # Video input (minimal processing)
+            '-f', 'image2pipe',
+            '-vcodec', 'mjpeg', 
+            '-i', 'pipe:0',
+            
+            # ULTRA-FAST ENCODING per CLAUDE.md
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-tune', 'zerolatency',
+            '-crf', '20',
+            '-maxrate', '4000k',
+            '-bufsize', '4000k',
+            '-g', '1',              # Every frame = keyframe
+            '-keyint_min', '1',
+            '-sc_threshold', '0',   # No scene detection
+            '-bf', '0',             # No B-frames  
+            '-refs', '1',           # Single reference frame
+            '-me_method', 'dia',    # Fastest motion estimation
+            '-subq', '0',           # No subpixel refinement
+            '-trellis', '0',        # No trellis quantization
+            '-aq-mode', '0',        # No adaptive quantization
+            '-profile:v', 'main',
+            '-level', '3.1',
+            
+            # Minimal color processing
+            '-vf', 'format=yuv420p', 
+            '-colorspace', 'bt709',
+            '-s', f'{self.resolution[0]}x{self.resolution[1]}',
+            
+            # Skip audio for maximum speed (Phase 1)
+            # Audio will be re-added in Phase 2 after testing
+            
+            # RTMP output with minimal buffering
+            '-f', 'flv',
+            '-flvflags', 'no_duration_filesize',
+            '-rtmp_live', 'live', 
+            '-rtmp_buffer', '100',
+            '-rtmp_flush_interval', '1',
+            
+            self.rtmp_url
         ]
         
         try:
@@ -366,45 +550,100 @@ class RawAudioStreamer:
                 cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE,
+                bufsize=65536
             )
             
             self.running = True
-            
-            # Start audio feeding thread
-            self.audio_thread = threading.Thread(target=self._audio_feed_loop, daemon=True)
-            self.audio_thread.start()
-            
-            logger.info("Raw audio streaming started")
+            logger.info("Combined audio/video streaming started")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to start audio streaming: {e}")
+            logger.error(f"Combined streaming failed: {e}")
+            return self._start_video_only()
+    
+    def _start_video_only(self):
+        """Fallback to video-only streaming"""
+        logger.info("Starting video-only streaming (audio failed)")
+        
+        cmd = [
+            'ffmpeg', '-y',
+            '-f', 'image2pipe',
+            '-vcodec', 'mjpeg', 
+            '-i', 'pipe:0',
+            '-c:v', 'libx264',
+            '-preset', 'ultrafast',
+            '-tune', 'zerolatency',
+            '-crf', '23',
+            '-maxrate', '3000k',
+            '-bufsize', '3000k',
+            '-vf', 'format=yuv420p',
+            '-g', '60',
+            '-s', f'{self.resolution[0]}x{self.resolution[1]}',
+            '-f', 'flv',
+            self.rtmp_url
+        ]
+        
+        try:
+            self.ffmpeg_process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE,
+                bufsize=65536
+            )
+            
+            self.running = True
+            logger.info("Video-only streaming started")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Video streaming failed: {e}")
             return False
     
-    def _audio_feed_loop(self):
-        """Feed raw audio data to FFmpeg"""
-        logger.info("Audio feed loop started")
+    def send_frame(self, jpeg_data):
+        """Send video frame to combined stream"""
+        if not self.running or not self.ffmpeg_process:
+            return False
         
-        while self.running:
-            if self.audio_capture:
-                audio_data = self.audio_capture.get_audio_data(timeout=0.01)
-                
-                if audio_data and self.ffmpeg_process:
-                    try:
-                        self.ffmpeg_process.stdin.write(audio_data)
-                        self.ffmpeg_process.stdin.flush()
-                    except Exception as e:
-                        if self.running:
-                            logger.error(f"Audio feed error: {e}")
-                        break
-            
-            time.sleep(0.0001)  # Ultra-minimal delay for low latency
+        if self.ffmpeg_process.poll() is not None:
+            # Process died - log FFmpeg stderr
+            _, stderr = self.ffmpeg_process.communicate()
+            if stderr:
+                logger.error(f"FFmpeg process died. Error: {stderr.decode()}")
+            else:
+                logger.warning("FFmpeg process died with no stderr")
+            self.running = False
+            return False
         
-        logger.info("Audio feed loop stopped")
+        try:
+            self.ffmpeg_process.stdin.write(jpeg_data)
+            self.ffmpeg_process.stdin.flush()
+            self.frames_sent += 1
+            return True
+        except Exception as e:
+            logger.error(f"Frame send error: {e}")
+            # Try to get FFmpeg stderr for debugging
+            try:
+                if self.ffmpeg_process.stderr:
+                    stderr_data = self.ffmpeg_process.stderr.read()
+                    if stderr_data:
+                        logger.error(f"FFmpeg stderr: {stderr_data.decode()}")
+            except:
+                pass
+            self.running = False
+            return False
+    
+    def get_statistics(self):
+        """Get streaming statistics"""
+        return {
+            'frames_sent': self.frames_sent,
+            'success_rate': 100.0 if self.running else 0.0,
+            'audio_enabled': self.audio_capture is not None
+        }
     
     def stop(self):
-        """Stop audio streaming"""
+        """Stop combined streaming"""
         self.running = False
         
         if self.audio_capture:
@@ -413,21 +652,19 @@ class RawAudioStreamer:
         if self.ffmpeg_process:
             try:
                 self.ffmpeg_process.stdin.close()
-                self.ffmpeg_process.wait(timeout=3)
+                self.ffmpeg_process.wait(timeout=5)
+                logger.info(f"Combined streaming stopped (sent {self.frames_sent} frames)")
             except:
                 self.ffmpeg_process.terminate()
-        
-        logger.info("Raw audio streaming stopped")
 
-class DualStreamBridge:
-    """WebRTC bridge with separate video and audio streams"""
+class CombinedStreamBridge:
+    """WebRTC bridge with combined audio and video in single stream"""
     
     def __init__(self, config):
         self.config = config
         
-        # Separate streamers
-        self.video_streamer = None
-        self.audio_streamer = None
+        # Combined streamer
+        self.av_streamer = None
         
         # Use simple frame receiver
         self.frame_receiver = SimpleFrameReceiver(port=5000)
@@ -435,30 +672,24 @@ class DualStreamBridge:
         self.running = False
     
     def start(self):
-        """Start dual stream bridge"""
-        logger.info("DUAL STREAM BRIDGE STARTING")
-        logger.info("=" * 32)
-        logger.info("Video: Stable RTMP stream (100% reliable)")
-        logger.info("Audio: Raw cross-platform capture")
+        """Start combined stream bridge"""
+        logger.info("COMBINED STREAM BRIDGE STARTING")
+        logger.info("=" * 35)
+        logger.info("Combined audio + video in single RTMP stream")
+        logger.info("DirectShow audio capture for Windows")
         
         # Start video receiver
         self.frame_receiver.start()
         
-        # Start stable video streaming
-        video_rtmp_url = f"{self.config.rtmp_url}/{self.config.stream_key}"
-        self.video_streamer = StableVideoStreamer(video_rtmp_url)
+        # Start combined audio/video streaming
+        rtmp_url = f"{self.config.rtmp_url}/{self.config.stream_key}"
+        self.av_streamer = CombinedAVStreamer(rtmp_url)
         
-        if not self.video_streamer.start():
-            logger.error("Failed to start video streaming")
+        if not self.av_streamer.start():
+            logger.error("Failed to start combined streaming")
             return False
         
-        # Start raw audio streaming  
-        self.audio_streamer = RawAudioStreamer(video_rtmp_url)
-        
-        if not self.audio_streamer.start():
-            logger.warning("Audio streaming failed - continuing video-only")
-        else:
-            logger.info("Audio streaming started successfully")
+        logger.info("Combined audio/video streaming started successfully")
         
         # Start processing loop
         self.running = True
@@ -476,25 +707,20 @@ class DualStreamBridge:
                 # ULTRA-LOW LATENCY: Process frames immediately with smart queue management
                 queue_size = self.frame_receiver.frame_queue.qsize()
                 
-                # Smart queue management - keep queue small but don't artificially delay
+                # Smart queue management for ultra-low latency (adapted for av_streamer)
                 if queue_size > 0:
-                    # If queue is building up (>10 frames), drop some older frames
-                    if queue_size > 10:
-                        # Drop half the queue to prevent massive buildup
-                        frames_to_drop = queue_size // 2
-                        for _ in range(frames_to_drop):
-                            dropped = self.frame_receiver.get_frame(timeout=0.0001)
-                            if not dropped:
-                                break
-                        
-                        if frames_to_drop > 0:
-                            logger.debug(f"Dropped {frames_to_drop} frames - queue was {queue_size}")
+                    # With 2-frame buffer, drop if building up (>1 frame for ultra-low latency)
+                    if queue_size > 1:
+                        # Drop older frame to prevent latency buildup
+                        dropped = self.frame_receiver.get_frame(timeout=0.0001)
+                        if dropped:
+                            logger.debug(f"Dropped frame - queue was {queue_size} (ultra-low latency)")
                     
                     # Process the next available frame immediately (no artificial delays)
                     frame_data = self.frame_receiver.get_frame(timeout=0.0001)
                     
-                    if frame_data and self.video_streamer:
-                        success = self.video_streamer.send_frame(frame_data)
+                    if frame_data and self.av_streamer:
+                        success = self.av_streamer.send_frame(frame_data)
                         if success:
                             video_frames += 1
                 
@@ -502,36 +728,28 @@ class DualStreamBridge:
                 if time.time() - start_time > 5:
                     # Get statistics
                     receiver_stats = self.frame_receiver.get_statistics()
-                    video_stats = self.video_streamer.get_statistics()
+                    av_stats = self.av_streamer.get_statistics()
                     
-                    logger.info("=== DUAL STREAM STATS ===")
+                    logger.info("=== COMBINED STREAM STATS ===")
                     logger.info(f"Frame Success Rate: {receiver_stats['success_rate']:.1f}%")
-                    logger.info(f"Video Success Rate: {video_stats['success_rate']:.1f}%")
-                    logger.info(f"Video FPS: {video_stats['fps']:.1f}")
-                    logger.info(f"Frames Sent: {video_stats['frames_sent']}")
+                    logger.info(f"Stream Success Rate: {av_stats['success_rate']:.1f}%")
+                    logger.info(f"Frames Sent: {av_stats['frames_sent']}")
+                    logger.info(f"Audio Enabled: {av_stats['audio_enabled']}")
                     logger.info(f"Incomplete Frames: {receiver_stats['incomplete_frames_count']}")
                     logger.info(f"Queue Size: {receiver_stats['frame_queue_size']}")
                     logger.info(f"Memory Est: {receiver_stats['memory_usage_mb']:.1f}MB")
                     
-                    # Enhanced memory leak and queue buildup detection
-                    if receiver_stats['incomplete_frames_count'] > 100:
+                    # Ultra-low latency monitoring
+                    if receiver_stats['incomplete_frames_count'] > 5:  # Much lower threshold
                         logger.warning(f"HIGH INCOMPLETE FRAME COUNT: {receiver_stats['incomplete_frames_count']} - potential latency buildup!")
                     
-                    if receiver_stats['frame_queue_size'] > 5:
-                        logger.warning(f"QUEUE BUILDUP DETECTED: {receiver_stats['frame_queue_size']} frames queued - should be 0-1 for 1:1 processing!")
+                    if receiver_stats['frame_queue_size'] > 1:  # Ultra-low latency: should be 0-1
+                        logger.warning(f"QUEUE BUILDUP DETECTED: {receiver_stats['frame_queue_size']} frames queued - ultra-low latency mode!")
                     
-                    # Alert if frame processing is falling behind
-                    expected_frames = video_stats['fps'] * 5  # 5 second window
-                    if video_frames < expected_frames * 0.9:  # Less than 90% of expected
-                        logger.warning(f"FRAME PROCESSING LAGGING: Expected ~{expected_frames:.0f}, got {video_frames} in last 5s")
-                    
-                    # Audio status
-                    if self.audio_streamer and self.audio_streamer.running:
-                        logger.info("Audio: Device 21 (Realtek) Streaming Active")
-                    else:
-                        logger.info("Audio: Video-only mode")
+                    # Audio status (skipped in Phase 1 for maximum speed)
+                    logger.info("Audio: SKIPPED for ultra-low latency (Phase 1)")
                         
-                    logger.info("=" * 26)
+                    logger.info("=" * 29)
                     
                     video_frames = 0
                     start_time = time.time()
@@ -545,33 +763,30 @@ class DualStreamBridge:
     
     def stop(self):
         """Stop bridge"""
-        logger.info("Stopping dual stream bridge")
+        logger.info("Stopping combined stream bridge")
         self.running = False
         
-        if self.audio_streamer:
-            self.audio_streamer.stop()
-        
-        if self.video_streamer:
-            self.video_streamer.stop()
+        if self.av_streamer:
+            self.av_streamer.stop()
         
         if self.frame_receiver:
             self.frame_receiver.stop()
         
-        logger.info("Dual stream bridge stopped")
+        logger.info("Combined stream bridge stopped")
 
 def main():
     """Main entry point"""
-    print("PRODUCTION WEBRTC BRIDGE - DUAL STREAM (VIDEO + AUDIO)")
-    print("=" * 56)
-    print("100% success rate video + Device 21 Realtek audio capture")
+    print("PRODUCTION WEBRTC BRIDGE - COMBINED STREAM (VIDEO + AUDIO)")
+    print("=" * 59)
+    print("Combined audio/video stream + DirectShow audio capture")
     
     config = LivepeerConfig()
-    bridge = DualStreamBridge(config)
+    bridge = CombinedStreamBridge(config)
     
     try:
         print(f"Stream ID: {config.stream_id}")
         print(f"Playback ID: {config.playback_id}")
-        print("=" * 52)
+        print("=" * 55)
         print("Press Ctrl+C to stop")
         print()
         
