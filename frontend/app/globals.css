@@ -8,7 +8,11 @@
   }
   
   body {
-    @apply bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 text-white min-h-screen;
+    @apply bg-gradient-to-br from-purple-900 via-slate-900 to-indigo-900 text-white min-h-screen;
+    background-image: 
+      radial-gradient(at 20% 80%, hsla(280, 100%, 70%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(300, 100%, 70%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 40% 40%, hsla(260, 100%, 70%, 0.1) 0px, transparent 50%);
   }
 }
 

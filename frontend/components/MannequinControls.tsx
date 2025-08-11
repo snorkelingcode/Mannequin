@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 
 interface MannequinControlsProps {
@@ -17,22 +17,57 @@ interface SliderControlProps {
   step: number
   unit?: string
   disabled?: boolean
+  usePercentageStep?: boolean
 }
 
-function SliderControl({ label, value, onChange, min, max, step, unit = '', disabled = false }: SliderControlProps) {
+function SliderControl({ 
+  label, 
+  value, 
+  onChange, 
+  min, 
+  max, 
+  step, 
+  unit = '', 
+  disabled = false,
+  usePercentageStep = false
+}: SliderControlProps) {
+  const [localValue, setLocalValue] = useState(value)
+  
+  // Calculate percentage-based step (5% increments by default)
+  const percentageStep = usePercentageStep ? (max - min) * 0.05 : step
+  
+  const handleChange = useCallback((newValue: number) => {
+    setLocalValue(newValue)
+    
+    if (usePercentageStep) {
+      // Only send command when reaching 5% increments
+      const percentage = ((newValue - min) / (max - min)) * 100
+      const roundedPercentage = Math.round(percentage / 5) * 5
+      const actualValue = min + ((roundedPercentage / 100) * (max - min))
+      
+      if (Math.abs(newValue - actualValue) < percentageStep / 2) {
+        onChange(actualValue)
+      }
+    } else {
+      onChange(newValue)
+    }
+  }, [min, max, onChange, percentageStep, usePercentageStep])
+  
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <label className="text-sm font-medium text-dark-300">{label}</label>
-        <span className="text-sm text-primary-400 font-mono">{value.toFixed(3)}{unit}</span>
+        <span className="text-sm text-primary-400 font-mono">
+          {usePercentageStep ? `${Math.round(((localValue - min) / (max - min)) * 100)}%` : `${localValue.toFixed(3)}${unit}`}
+        </span>
       </div>
       <input
         type="range"
         min={min}
         max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
+        step={percentageStep}
+        value={localValue}
+        onChange={(e) => handleChange(parseFloat(e.target.value))}
         disabled={disabled}
         className="slider-input"
       />
@@ -291,15 +326,6 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           ))}
         </div>
         
-        <div className="mt-4">
-          <button
-            onClick={() => sendCommand('View.Desktop')}
-            disabled={!isConnected}
-            className="btn-secondary"
-          >
-            Desktop View
-          </button>
-        </div>
       </CollapsibleSection>
       
       {/* Appearance Customization */}
@@ -365,6 +391,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
               max={1.2}
               step={0.01}
               disabled={!isConnected}
+              usePercentageStep={true}
             />
           </div>
           
@@ -380,6 +407,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 max={1}
                 step={0.01}
                 disabled={!isConnected}
+                usePercentageStep={true}
               />
               <SliderControl
                 label="Green"
@@ -389,6 +417,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 max={1}
                 step={0.01}
                 disabled={!isConnected}
+                usePercentageStep={true}
               />
               <SliderControl
                 label="Blue"
@@ -398,6 +427,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 max={1}
                 step={0.01}
                 disabled={!isConnected}
+                usePercentageStep={true}
               />
             </div>
           </div>
@@ -414,6 +444,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 max={1}
                 step={0.01}
                 disabled={!isConnected}
+                usePercentageStep={true}
               />
               <SliderControl
                 label="Eye Saturation"
@@ -424,6 +455,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                 step={1}
                 unit="%"
                 disabled={!isConnected}
+                usePercentageStep={true}
               />
             </div>
           </div>
@@ -554,6 +586,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
               max={3.0}
               step={0.01}
               disabled={!isConnected}
+              usePercentageStep={true}
             />
           ))}
         </div>
@@ -581,6 +614,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -607,6 +641,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -631,6 +666,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -655,6 +691,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -678,6 +715,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -702,6 +740,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -728,6 +767,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -751,6 +791,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -777,6 +818,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
@@ -802,6 +844,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
                   max={1}
                   step={0.01}
                   disabled={!isConnected}
+                  usePercentageStep={true}
                 />
               ))}
             </div>
