@@ -305,7 +305,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
     <div className="space-y-6">
       {/* Camera Presets */}
       <CollapsibleSection title="📹 Camera Presets" defaultOpen={true}>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-2">
           {[
             { label: 'Default', cmd: 'CAMSHOT.Default' },
             { label: 'Extreme Close', cmd: 'CAMSHOT.ExtremeClose' },
@@ -334,7 +334,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           {/* Outfits */}
           <div>
             <h4 className="text-lg font-semibold text-neutral-100 mb-3">👔 Outfits</h4>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               {[
                 { label: 'Default', cmd: 'OF.Default' },
                 { label: 'Maid Dress', cmd: 'OF.MaidDress' },
@@ -464,8 +464,8 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
       
       
       {/* Facial Expressions */}
-      <CollapsibleSection title="😊 Facial Expressions">
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+      <CollapsibleSection title="😊 Facial Expressions" defaultOpen={true}>
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-2">
           {[
             { label: '😐 Neutral', cmd: 'FACE.Default' },
             { label: '😊 Happy', cmd: 'FACE.Happy' },
@@ -502,12 +502,12 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
       </CollapsibleSection>
       
       {/* Animations & Emotes */}
-      <CollapsibleSection title="💃 Animations & Emotes">
+      <CollapsibleSection title="💃 Animations & Emotes" defaultOpen={true}>
         <div className="space-y-4">
           {/* Basic Animations */}
           <div>
             <h4 className="text-lg font-semibold text-neutral-100 mb-3">Basic Animations</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
               <button
                 onClick={() => sendCommand('ANIM.Dance')}
                 disabled={!isConnected}
@@ -542,7 +542,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           {/* Emotes */}
           <div>
             <h4 className="text-lg font-semibold text-neutral-100 mb-3">Emotes</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-2">
               {[
                 { label: '👋 Wave', cmd: 'EMOTE.Wave' },
                 { label: '🫡 Salute', cmd: 'EMOTE.Salute' },
@@ -574,7 +574,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
       </CollapsibleSection>
       
       {/* Bone Sizes */}
-      <CollapsibleSection title="🦴 Bone Sizes">
+      <CollapsibleSection title="🦴 Bone Sizes" defaultOpen={true}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(boneSizes).map(([bone, value]) => (
             <SliderControl
@@ -593,7 +593,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
       </CollapsibleSection>
 
       {/* Morph Targets - All actual hooks.txt morphs */}
-      <CollapsibleSection title="🎭 Morph Targets">
+      <CollapsibleSection title="🎭 Morph Targets" defaultOpen={true}>
         <div className="space-y-6">
           {/* Head Structure */}
           <div>
