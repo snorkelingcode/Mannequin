@@ -154,14 +154,14 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
   const handleSkinToneChange = async (value: number) => {
     setSkinTone(value)
     // Use hooks.txt format: SKC.Float
-    await sendCommand(`SKC_${value.toFixed(2)}`)
+    await sendCommand(`SKC.${value.toFixed(2)}`)
   }
   
   const handleHairColorChange = async (color: 'r' | 'g' | 'b', value: number) => {
     const newColor = { ...hairColor, [color]: value }
     setHairColor(newColor)
     // Use hooks.txt format: HCR.Float, HCG.Float, HCB.Float
-    await sendCommand(`HC${color.toUpperCase()}_${value.toFixed(2)}`)
+    await sendCommand(`HC${color.toUpperCase()}.${value.toFixed(2)}`)
   }
   
   const handleBoneSizeChange = async (bone: string, value: number) => {
@@ -180,20 +180,20 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
     
     const boneCode = boneMap[bone]
     if (boneCode) {
-      await sendCommand(`${boneCode}_${value.toFixed(2)}`)
+      await sendCommand(`${boneCode}.${value.toFixed(2)}`)
     }
   }
 
   const handleEyeColorChange = async (value: number) => {
     setEyeColor(value)
     // Use hooks.txt format: EC.Float
-    await sendCommand(`EC_${value.toFixed(2)}`)
+    await sendCommand(`EC.${value.toFixed(2)}`)
   }
 
   const handleEyeSaturationChange = async (value: number) => {
     setEyeSaturation(value)
     // Use hooks.txt format: ES.Float
-    await sendCommand(`ES_${value.toFixed(1)}`)
+    await sendCommand(`ES.${value.toFixed(1)}`)
   }
 
   const handleMorphTargetChange = async (morphType: string, value: number) => {
@@ -262,7 +262,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
     
     const morphCode = morphMap[morphType]
     if (morphCode) {
-      await sendCommand(`${morphCode}_${value.toFixed(2)}`)
+      await sendCommand(`${morphCode}.${value.toFixed(2)}`)
     }
   }
   
