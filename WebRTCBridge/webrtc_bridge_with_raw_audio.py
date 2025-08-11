@@ -32,14 +32,14 @@ class SimpleFrameReceiver:
         self.port = port
         self.socket = None
         self.running = False
-        self.frame_queue = queue.Queue(maxsize=2)  # Ultra-low latency: only 2 frames buffered
+        self.frame_queue = queue.Queue(maxsize=50)  # Restore working buffer size
         self.receive_thread = None
         
-        # Aggressive frame dropping per CLAUDE.md Phase 1
+        # Frame reconstruction settings - restore working values from reference
         self.incomplete_frames = {}
-        self.frame_timeout = 0.05  # 50ms max frame age (CLAUDE.md spec)
+        self.frame_timeout = 1.0  # Restore working 1.0s timeout from reference
         self.last_cleanup = time.time()
-        self.max_incomplete_frames = 5  # Minimal incomplete buffer
+        self.max_incomplete_frames = 200  # Restore working buffer from reference
         
         # Statistics
         self.frames_received = 0
@@ -96,8 +96,8 @@ class SimpleFrameReceiver:
                         logger.warning("No packets received in last 5 seconds!")
                     last_log_time = current_time
                     
-                # Aggressive cleanup per CLAUDE.md - drop older frames immediately  
-                if current_time - self.last_cleanup > 0.033:  # 33ms = 30fps cleanup
+                # Cleanup expired frames - restore working frequency
+                if current_time - self.last_cleanup > 0.5:  # 500ms cleanup like reference
                     self._cleanup_incomplete_frames(current_time)
                     self.last_cleanup = current_time
                     
@@ -129,28 +129,16 @@ class SimpleFrameReceiver:
                 
             payload = data[8:8+payload_size]
             
-            # Drop older incomplete frames immediately (CLAUDE.md aggressive dropping)
-            current_time = time.time()
-            expired = [fid for fid, info in self.incomplete_frames.items() 
-                      if current_time - info['timestamp'] > 0.033]  # 33ms = 30fps
-            for expired_frame_id in expired:
-                del self.incomplete_frames[expired_frame_id]
-                self.frames_dropped += 1
-            
-            # Initialize frame tracking with minimal buffer
+            # Initialize frame tracking with memory protection - restore working logic
             if frame_id not in self.incomplete_frames:
-                # Hard limit on incomplete frames for ultra-low latency
+                # Aggressive cleanup if too many incomplete frames (prevents memory leaks)
                 if len(self.incomplete_frames) >= self.max_incomplete_frames:
-                    # Drop oldest frame immediately
-                    oldest_frame_id = min(self.incomplete_frames.keys(), 
-                                        key=lambda x: self.incomplete_frames[x]['timestamp'])
-                    del self.incomplete_frames[oldest_frame_id]
-                    self.frames_dropped += 1
+                    self._aggressive_cleanup()
                 
                 self.incomplete_frames[frame_id] = {
                     'chunks': {},
                     'total_chunks': total_chunks,
-                    'timestamp': current_time
+                    'timestamp': time.time()
                 }
             
             frame_info = self.incomplete_frames[frame_id]
@@ -215,8 +203,8 @@ class SimpleFrameReceiver:
             self.frames_dropped += frames_to_drop
             logger.warning(f"Aggressive cleanup: dropped {frames_to_drop} incomplete frames to prevent memory leak")
     
-    def get_frame(self, timeout=0.0001):  # Reduced timeout for lower latency
-        """Get next complete frame"""
+    def get_frame(self, timeout=0.01):
+        """Get next complete frame - simplified for RTMP connection testing"""
         try:
             frame = self.frame_queue.get(timeout=timeout)
             self.frames_received += 1
@@ -500,48 +488,41 @@ class CombinedAVStreamer:
         
         cmd = [
             'ffmpeg', '-y',
-            '-fflags', '+genpts+discardcorrupt',
-            '-avoid_negative_ts', 'make_zero',
+            '-v', 'info',  # Enable verbose output to debug RTMP connection
             
-            # Video input (minimal processing)
+            # Input: MJPEG frames from Unreal Engine (match working reference)
             '-f', 'image2pipe',
             '-vcodec', 'mjpeg', 
             '-i', 'pipe:0',
             
-            # ULTRA-FAST ENCODING per CLAUDE.md
+            # Ultra-stable encoding pipeline - fix VBV underflow
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-tune', 'zerolatency',
-            '-crf', '20',
-            '-maxrate', '4000k',
-            '-bufsize', '4000k',
-            '-g', '1',              # Every frame = keyframe
-            '-keyint_min', '1',
-            '-sc_threshold', '0',   # No scene detection
-            '-bf', '0',             # No B-frames  
-            '-refs', '1',           # Single reference frame
-            '-me_method', 'dia',    # Fastest motion estimation
-            '-subq', '0',           # No subpixel refinement
-            '-trellis', '0',        # No trellis quantization
-            '-aq-mode', '0',        # No adaptive quantization
-            '-profile:v', 'main',
-            '-level', '3.1',
+            '-preset', 'fast',           # Match working reference (not ultrafast)
+            '-tune', 'film',             # Match working reference (not zerolatency)
+            '-crf', '28',                # Slightly lower CRF for better quality
+            '-maxrate', '2000k',         # Higher max bitrate to prevent underflow
+            '-bufsize', '2000k',         # Match buffer size to maxrate
+            '-minrate', '500k',          # Lower min bitrate for flexibility
             
-            # Minimal color processing
-            '-vf', 'format=yuv420p', 
-            '-colorspace', 'bt709',
-            '-s', f'{self.resolution[0]}x{self.resolution[1]}',
+            # Simplified processing chain - match working reference
+            '-vf', 'format=yuv420p,fps=20',  # Force 20fps for ultra-stability
             
-            # Skip audio for maximum speed (Phase 1)
-            # Audio will be re-added in Phase 2 after testing
+            # Ultra-stable x264 parameters - fix VBV underflow issues
+            '-x264-params', 'aq-mode=0:ref=1:bframes=0:rc-lookahead=0:scenecut=0:keyint=40:min-keyint=20:qpmin=18:qpmax=40:vbv-init=0.9',
+            '-g', '40',                  # Match working reference GOP
+            '-keyint_min', '20',         # Match working reference keyframe interval
+            '-profile:v', 'baseline',    # Match working reference profile
+            '-level', '3.0',             # Match working reference level
             
-            # RTMP output with minimal buffering
+            # Force constant frame rate with strict timing - match working reference
+            '-r', '20',                  # Ultra-stable 20fps
+            '-vsync', 'cfr',             # Constant frame rate (most stable)
+            '-force_fps',                # Force frame rate
+            
+            # Streaming optimizations for minimal jitter - match working reference
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize',
-            '-rtmp_live', 'live', 
-            '-rtmp_buffer', '100',
-            '-rtmp_flush_interval', '1',
-            
+            '-flvflags', 'no_duration_filesize+no_metadata',
+            '-fflags', '+flush_packets+genpts',  # Flush packets immediately
             self.rtmp_url
         ]
         
@@ -555,12 +536,46 @@ class CombinedAVStreamer:
             )
             
             self.running = True
+            
+            # Start stderr monitoring thread to debug RTMP connection
+            self.stderr_thread = threading.Thread(target=self._monitor_ffmpeg_stderr, daemon=True)
+            self.stderr_thread.start()
+            
             logger.info("Combined audio/video streaming started")
             return True
             
         except Exception as e:
             logger.error(f"Combined streaming failed: {e}")
             return self._start_video_only()
+    
+    def _monitor_ffmpeg_stderr(self):
+        """Monitor FFmpeg stderr for RTMP connection debugging"""
+        if not self.ffmpeg_process or not self.ffmpeg_process.stderr:
+            return
+            
+        try:
+            while self.running and self.ffmpeg_process:
+                line = self.ffmpeg_process.stderr.readline()
+                if not line:
+                    break
+                    
+                line_str = line.decode('utf-8', errors='ignore').strip()
+                
+                # Log all FFmpeg output for debugging
+                if line_str:
+                    logger.info(f"FFmpeg: {line_str}")
+                
+                # Look for connection issues
+                if any(error in line_str.lower() for error in [
+                    'connection refused', 'connection reset', 'broken pipe',
+                    'rtmp server', 'failed to connect', 'connection timed out',
+                    'server disconnected', 'connection lost', 'invalid stream',
+                    'authentication failed'
+                ]):
+                    logger.error(f"RTMP CONNECTION ERROR: {line_str}")
+                    
+        except Exception as e:
+            logger.debug(f"Stderr monitoring error: {e}")
     
     def _start_video_only(self):
         """Fallback to video-only streaming"""
@@ -602,19 +617,35 @@ class CombinedAVStreamer:
             return False
     
     def send_frame(self, jpeg_data):
-        """Send video frame to combined stream"""
+        """Send frame with precise 20fps pacing - match working reference"""
         if not self.running or not self.ffmpeg_process:
             return False
         
         if self.ffmpeg_process.poll() is not None:
-            # Process died - log FFmpeg stderr
-            _, stderr = self.ffmpeg_process.communicate()
-            if stderr:
-                logger.error(f"FFmpeg process died. Error: {stderr.decode()}")
-            else:
-                logger.warning("FFmpeg process died with no stderr")
+            logger.warning("FFmpeg process died")
             self.running = False
             return False
+        
+        # Validate JPEG data like working reference
+        if not jpeg_data or len(jpeg_data) < 10:
+            return False
+            
+        # Validate JPEG header like working reference
+        if jpeg_data[0] != 0xFF or jpeg_data[1] != 0xD8:
+            return False
+        
+        # Ultra-stable frame pacing - target 20fps (50ms between frames)
+        current_time = time.time()
+        if hasattr(self, 'last_frame_time'):
+            target_interval = 1.0 / 20.0  # 20fps = 50ms for ultra-stability
+            elapsed = current_time - self.last_frame_time
+            if elapsed < target_interval:
+                # Precise sleep to maintain exact 20fps timing
+                sleep_time = target_interval - elapsed
+                if sleep_time > 0:
+                    time.sleep(min(sleep_time, 0.05))  # Max 50ms sleep for 20fps
+        
+        self.last_frame_time = current_time
         
         try:
             self.ffmpeg_process.stdin.write(jpeg_data)
@@ -623,14 +654,6 @@ class CombinedAVStreamer:
             return True
         except Exception as e:
             logger.error(f"Frame send error: {e}")
-            # Try to get FFmpeg stderr for debugging
-            try:
-                if self.ffmpeg_process.stderr:
-                    stderr_data = self.ffmpeg_process.stderr.read()
-                    if stderr_data:
-                        logger.error(f"FFmpeg stderr: {stderr_data.decode()}")
-            except:
-                pass
             self.running = False
             return False
     
@@ -704,25 +727,13 @@ class CombinedStreamBridge:
         
         try:
             while self.running:
-                # ULTRA-LOW LATENCY: Process frames immediately with smart queue management
-                queue_size = self.frame_receiver.frame_queue.qsize()
+                # Process frames continuously with minimal frame dropping for RTMP stability
+                frame_data = self.frame_receiver.get_frame(timeout=0.01)
                 
-                # Smart queue management for ultra-low latency (adapted for av_streamer)
-                if queue_size > 0:
-                    # With 2-frame buffer, drop if building up (>1 frame for ultra-low latency)
-                    if queue_size > 1:
-                        # Drop older frame to prevent latency buildup
-                        dropped = self.frame_receiver.get_frame(timeout=0.0001)
-                        if dropped:
-                            logger.debug(f"Dropped frame - queue was {queue_size} (ultra-low latency)")
-                    
-                    # Process the next available frame immediately (no artificial delays)
-                    frame_data = self.frame_receiver.get_frame(timeout=0.0001)
-                    
-                    if frame_data and self.av_streamer:
-                        success = self.av_streamer.send_frame(frame_data)
-                        if success:
-                            video_frames += 1
+                if frame_data and self.av_streamer:
+                    success = self.av_streamer.send_frame(frame_data)
+                    if success:
+                        video_frames += 1
                 
                 # Print stats every 5 seconds
                 if time.time() - start_time > 5:
@@ -739,8 +750,8 @@ class CombinedStreamBridge:
                     logger.info(f"Queue Size: {receiver_stats['frame_queue_size']}")
                     logger.info(f"Memory Est: {receiver_stats['memory_usage_mb']:.1f}MB")
                     
-                    # Ultra-low latency monitoring
-                    if receiver_stats['incomplete_frames_count'] > 5:  # Much lower threshold
+                    # Balanced latency monitoring (CLAUDE.md Phase A/B)
+                    if receiver_stats['incomplete_frames_count'] > 10:  # Adjusted for new buffer size
                         logger.warning(f"HIGH INCOMPLETE FRAME COUNT: {receiver_stats['incomplete_frames_count']} - potential latency buildup!")
                     
                     if receiver_stats['frame_queue_size'] > 1:  # Ultra-low latency: should be 0-1
