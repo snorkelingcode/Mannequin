@@ -20,13 +20,13 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <header className="text-center mb-8">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-primary-300 to-primary-500 bg-clip-text text-transparent mb-4">
             Mannequin Beta
           </h1>
-          <p className="text-xl text-dark-300">
+          <p className="text-xl text-neutral-200">
             Interactive Metahuman Customization Platform
           </p>
-          <p className="text-sm text-dark-400 mt-2">
+          <p className="text-sm text-neutral-400 mt-2">
             All changes appear globally. When you make a change, everyone sees it in real-time. Let's see what we can create!
           </p>
         </header>
@@ -55,24 +55,24 @@ export default function Home() {
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="card text-center">
               <div className="text-4xl mb-3">🎮</div>
-              <h3 className="text-lg font-semibold text-primary-400 mb-2">Real-time Controls</h3>
-              <p className="text-dark-300 text-sm">
+              <h3 className="text-lg font-semibold text-primary-300 mb-2">Real-time Controls</h3>
+              <p className="text-neutral-300 text-sm">
                 Customize your mannequin in real-time with camera controls, facial expressions, and body modifications.
               </p>
             </div>
             
             <div className="card text-center">
               <div className="text-4xl mb-3">🚀</div>
-              <h3 className="text-lg font-semibold text-primary-400 mb-2">Ultra-Low Latency</h3>
-              <p className="text-dark-300 text-sm">
+              <h3 className="text-lg font-semibold text-primary-300 mb-2">Ultra-Low Latency</h3>
+              <p className="text-neutral-300 text-sm">
                 Sub-3 second streaming latency using WebRTC and optimized pipeline from Unreal Engine to Livepeer.
               </p>
             </div>
             
             <div className="card text-center">
               <div className="text-4xl mb-3">🔒</div>
-              <h3 className="text-lg font-semibold text-primary-400 mb-2">Secure Bridge</h3>
-              <p className="text-dark-300 text-sm">
+              <h3 className="text-lg font-semibold text-primary-300 mb-2">Secure Bridge</h3>
+              <p className="text-neutral-300 text-sm">
                 Hacker-proof WebSocket bridge with authentication, rate limiting, and command validation.
               </p>
             </div>
@@ -80,7 +80,7 @@ export default function Home() {
         )}
         
         {/* Footer */}
-        <footer className="mt-12 text-center text-dark-400 text-sm">
+        <footer className="mt-12 text-center text-neutral-400 text-sm">
           <p> 
             Powered by Unreal Engine 5.5 • 
             Streamed via Livepeer • 

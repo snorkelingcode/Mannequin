@@ -56,8 +56,8 @@ function SliderControl({
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <label className="text-sm font-medium text-dark-300">{label}</label>
-        <span className="text-sm text-primary-400 font-mono">
+        <label className="text-sm font-medium text-neutral-200">{label}</label>
+        <span className="text-sm text-primary-300 font-mono">
           {usePercentageStep ? `${Math.round(((localValue - min) / (max - min)) * 100)}%` : `${localValue.toFixed(3)}${unit}`}
         </span>
       </div>
@@ -90,11 +90,11 @@ function CollapsibleSection({ title, children, defaultOpen = false }: Collapsibl
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between text-left"
       >
-        <h3 className="text-xl font-bold text-primary-400">{title}</h3>
+        <h3 className="text-xl font-bold text-primary-300">{title}</h3>
         {isOpen ? (
-          <ChevronUpIcon className="h-5 w-5 text-primary-400" />
+          <ChevronUpIcon className="h-5 w-5 text-primary-300" />
         ) : (
-          <ChevronDownIcon className="h-5 w-5 text-primary-400" />
+          <ChevronDownIcon className="h-5 w-5 text-primary-300" />
         )}
       </button>
       {isOpen && (
@@ -333,7 +333,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Outfits */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">👔 Outfits</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">👔 Outfits</h4>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: 'Default', cmd: 'OF.Default' },
@@ -358,7 +358,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           
           {/* Hair Styles */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">💇 Hair Styles</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">💇 Hair Styles</h4>
             <div className="space-y-2">
               {[
                 { label: 'Default Hair', cmd: 'HS.Default' },
@@ -382,7 +382,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
         <div className="mt-6 space-y-6">
           {/* Skin Tone */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">🎨 Skin Tone</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">🎨 Skin Tone</h4>
             <SliderControl
               label="Skin Tone"
               value={skinTone}
@@ -397,7 +397,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           
           {/* Hair Color */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">🎨 Hair Color (RGB)</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">🎨 Hair Color (RGB)</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <SliderControl
                 label="Red"
@@ -434,7 +434,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           
           {/* Eye Customization */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">👁️ Eyes</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">👁️ Eyes</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SliderControl
                 label="Eye Color"
@@ -506,7 +506,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
         <div className="space-y-4">
           {/* Basic Animations */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Basic Animations</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Basic Animations</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               <button
                 onClick={() => sendCommand('ANIM.Dance')}
@@ -541,7 +541,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
           
           {/* Emotes */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Emotes</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Emotes</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {[
                 { label: '👋 Wave', cmd: 'EMOTE.Wave' },
@@ -597,7 +597,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
         <div className="space-y-6">
           {/* Head Structure */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Head Structure</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Head Structure</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { key: 'headTop', label: 'Head Top' },
@@ -622,7 +622,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Neck */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Neck</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Neck</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { key: 'neckFrontTop', label: 'Neck Front Top' },
@@ -649,7 +649,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Ears */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Ears</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Ears</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { key: 'earWidth', label: 'Ear Width' },
@@ -674,7 +674,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Forehead/Temples */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Forehead & Temples</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Forehead & Temples</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { key: 'foreheadCenter', label: 'Forehead Center' },
@@ -699,7 +699,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Eyebrows */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Eyebrows</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Eyebrows</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { key: 'eyebrowHeight', label: 'Eyebrow Height' },
@@ -723,7 +723,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Eyes */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Eyes</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Eyes</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { key: 'eyeCavity', label: 'Eye Cavity' },
@@ -748,7 +748,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Nose */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Nose</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Nose</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { key: 'noseBase', label: 'Nose Base' },
@@ -775,7 +775,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Cheeks */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Cheeks</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Cheeks</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { key: 'cheekBone', label: 'Cheek Bone' },
@@ -799,7 +799,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Lips */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Lips</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Lips</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { key: 'lipsOuter', label: 'Lips Outer' },
@@ -826,7 +826,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Chin/Jaw */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Chin & Jaw</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Chin & Jaw</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { key: 'chinLength', label: 'Chin Length' },
@@ -852,7 +852,7 @@ export default function MannequinControls({ sendCommand, isConnected }: Mannequi
 
           {/* Other */}
           <div>
-            <h4 className="text-lg font-semibold text-white mb-3">Other</h4>
+            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Other</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <SliderControl
                 label="Horns"
