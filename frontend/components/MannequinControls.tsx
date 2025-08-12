@@ -712,6 +712,7 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
             <h4 className="text-lg font-semibold text-neutral-100 mb-3">Emotes</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-2">
               {[
+                // Basic Actions
                 { label: '👋 Wave', cmd: 'EMOTE.Wave' },
                 { label: '🫡 Salute', cmd: 'EMOTE.Salute' },
                 { label: '🙇 Bow', cmd: 'EMOTE.Bow' },
@@ -719,13 +720,51 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
                 { label: '🤫 Shush', cmd: 'EMOTE.Shushing' },
                 { label: '🙏 Plead', cmd: 'EMOTE.Plead' },
                 { label: '🤔 Ponder', cmd: 'EMOTE.Ponder' },
-                { label: '😤 Show Money', cmd: 'EMOTE.ShowMeTheMoney' },
-                { label: '😤 Middle Finger', cmd: 'EMOTE.MiddleFinger' },
-                { label: '😤 Cooking', cmd: 'EMOTE.Cooking' },
-                { label: '😤 Jorkit', cmd: 'EMOTE.Jorkit' },
-                { label: '😤 Grinding', cmd: 'EMOTE.Grinding' },
-                { label: '😤 Salute', cmd: 'EMOTE.Salute' },
-                { label: '😤 Sizing Big', cmd: 'EMOTE.SizingBig' }
+                { label: '💰 Show Money', cmd: 'EMOTE.ShowMeTheMoney' },
+                
+                // Communication
+                { label: '🤐 Telling Secret', cmd: 'EMOTE.TellingSecret' },
+                { label: '👂 Can\'t Hear', cmd: 'EMOTE.CantHear' },
+                { label: '🕒 Clock\'s Ticking', cmd: 'EMOTE.ClocksTicking' },
+                { label: '👐 Present Info', cmd: 'EMOTE.PresentInformation' },
+                { label: '🔊 Make Louder', cmd: 'EMOTE.MakeVoiceLouder' },
+                { label: '🚫 Deny Access', cmd: 'EMOTE.DenyAccess' },
+                
+                // Gestures
+                { label: '👋 Come Here (Seductive)', cmd: 'EMOTE.ComeHereSeductive' },
+                { label: '🤙 Come Here (Challenge)', cmd: 'EMOTE.ComeHereChallenge' },
+                { label: '👌 Sizing Big', cmd: 'EMOTE.SizingBig' },
+                { label: '💸 Make It Rain', cmd: 'EMOTE.MakeItRain' },
+                { label: '🔟 Count to 10', cmd: 'EMOTE.Count10' },
+                { label: '✋ Up Yours', cmd: 'EMOTE.UpYours' },
+                
+                // Emotions
+                { label: '😠 Angry', cmd: 'EMOTE.Angry' },
+                { label: '😡 Angry 2', cmd: 'EMOTE.Angry2' },
+                { label: '😤 Annoyed', cmd: 'EMOTE.Annoyed' },
+                { label: '😕 Confused', cmd: 'EMOTE.Confused' },
+                { label: '😰 Nervous', cmd: 'EMOTE.Nervous' },
+                { label: '😩 Despair', cmd: 'EMOTE.Despair' },
+                { label: '🌟 Feeling Alive', cmd: 'EMOTE.FeelingAlive' },
+                { label: '😈 Plotting', cmd: 'EMOTE.Plotting' },
+                { label: '🏆 Score', cmd: 'EMOTE.Score' },
+                { label: '🤢 Smelly', cmd: 'EMOTE.Smelly' },
+                
+                // Actions
+                { label: '🍳 Cooking', cmd: 'EMOTE.YourCookingBro' },
+                { label: '💃 Dance 2', cmd: 'EMOTE.Dance2' },
+                { label: '💃 Grinding', cmd: 'EMOTE.Grinding' },
+                { label: '🚬 Smoking', cmd: 'EMOTE.Smoking' },
+                { label: '⚡ Smite', cmd: 'EMOTE.Smite' },
+                
+                // NSFW Actions
+                { label: '🖕 Middle Finger', cmd: 'EMOTE.MiddleFinger' },
+                { label: '🖕 Middle Finger Joke', cmd: 'EMOTE.MiddleFingerJoke' },
+                { label: '👉 Finger Gun Self', cmd: 'EMOTE.FingerGunSelf' },
+                { label: '👉 Finger Gun Viewer', cmd: 'EMOTE.FingerGunViewer' },
+                { label: '🎮 Jork', cmd: 'EMOTE.Jork' },
+                { label: '🎮 Jorkit', cmd: 'EMOTE.Jorkit' },
+                { label: '✂️📄🖕 Rock Paper Middle', cmd: 'EMOTE.RockPaperMiddle' }
               ].map(({ label, cmd }) => (
                 <button
                   key={cmd}
