@@ -632,7 +632,7 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
   return (
     <div className="space-y-6">
       {/* Facial Expressions */}
-      <CollapsibleSection title="😊 Facial Expressions" defaultOpen={true}>
+      <CollapsibleSection title="😊 Facial Expressions" defaultOpen={false}>
         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-2">
           {[
             { label: '😐 Neutral', cmd: 'FACE.Default' },
@@ -670,7 +670,7 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
       </CollapsibleSection>
       
       {/* Animations & Emotes */}
-      <CollapsibleSection title="💃 Animations & Emotes" defaultOpen={true}>
+      <CollapsibleSection title="💃 Animations & Emotes" defaultOpen={false}>
         <div className="space-y-4">
           {/* Basic Animations */}
           <div>
@@ -781,7 +781,7 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
       </CollapsibleSection>
       
       {/* Bone Sizes */}
-      <CollapsibleSection title="🦴 Bone Sizes" defaultOpen={true}>
+      <CollapsibleSection title="🦴 Bone Sizes" defaultOpen={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(boneSizes).map(([bone, value]) => (
             <SliderControl
@@ -800,7 +800,7 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
       </CollapsibleSection>
 
       {/* Morph Targets - All actual hooks.txt morphs */}
-      <CollapsibleSection title="🎭 Morph Targets" defaultOpen={true}>
+      <CollapsibleSection title="🎭 Morph Targets" defaultOpen={false}>
         <div className="space-y-6">
           {/* Head Structure */}
           <div>
