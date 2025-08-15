@@ -298,7 +298,7 @@ class OptimizedRTMPStreamer:
             '-c:v', 'libx264',
             '-preset', 'ultrafast',      # Ultra-fast encoding for minimum latency
             '-tune', 'zerolatency',      # Ultra-low latency encoding
-            '-crf', '30',                # Even higher CRF for ultra-stable bitrate
+            '-crf', '23',                # Even higher CRF for ultra-stable bitrate
             '-maxrate', '1200k',         # Further reduced max bitrate
             '-bufsize', '600k',          # Smaller buffer for faster response
             '-minrate', '600k',          # Higher minimum bitrate for consistency

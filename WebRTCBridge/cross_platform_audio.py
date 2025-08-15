@@ -20,6 +20,18 @@ class AudioConfig:
     format_bits: int = 16
 
 class CrossPlatformAudioCapture:
+    def stream_audio_to_pipe(self, pipe):
+        """Continuously write raw audio data to a pipe (for FFmpeg stdin)"""
+        print("[AUDIO->PIPE] Streaming audio to FFmpeg pipe...")
+        while self.running:
+            audio_data = self.get_audio_data(timeout=0.01)
+            if audio_data:
+                try:
+                    pipe.write(audio_data)
+                    pipe.flush()
+                except Exception as e:
+                    print(f"[ERROR] Audio pipe write error: {e}")
+                    break
     """Cross-platform audio capture using best available method"""
     
     def __init__(self, config: AudioConfig):
@@ -46,10 +58,10 @@ class CrossPlatformAudioCapture:
         methods = []
         
         if os_name == "windows":
-            # Windows methods in priority order (DirectShow first since it works)
+            # Windows methods in priority order (WASAPI first to avoid DirectShow buffer overflow)
             methods = [
-                ("ffmpeg_dshow", self._test_ffmpeg_dshow),
                 ("wasapi_loopback", self._test_wasapi_loopback),
+                ("ffmpeg_dshow", self._test_ffmpeg_dshow),
                 ("sounddevice", self._test_sounddevice),
                 ("pyaudio", self._test_pyaudio)
             ]
