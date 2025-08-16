@@ -25,7 +25,7 @@ start "Frontend" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\Mannequin\fronte
 
 REM Start Text-to-Face Hook (Terminal 3)
 echo 🎭 Starting Text-to-Face Hook...
-start "Text-to-Face Hook" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\NeuroBuff\neurosync\neurosync_player-main" && echo Starting Text-to-Face Hook... && python chat_response_hook.py"
+start "Text-to-Face Hook" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\Mannequin" && echo Installing dependencies... && pip install -r text_to_face_requirements.txt && echo Starting Text-to-Face Hook... && python text_to_face_receiver.py"
 
 REM Wait a moment for text-to-face to start
 timeout /t 2 /nobreak >nul
