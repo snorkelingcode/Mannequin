@@ -91,7 +91,7 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
         setIsTyping(false)
         
         // Send AI response to text-to-face receiver via ngrok
-        const textToFaceUrl = process.env.NEXT_PUBLIC_TEXT_TO_FACE_URL || 'https://a127e613717b.ngrok.app/chat_response'
+        const textToFaceUrl = process.env.NEXT_PUBLIC_TEXT_TO_FACE_URL || 'https://50110072a0bb.ngrok.app/chat_response'
         try {
           await fetch(textToFaceUrl, {
             method: 'POST',
