@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import LivepeerPlayer from '../components/LivepeerPlayer'
 import { PrimaryControls, SecondaryControls } from '../components/MannequinControls'
+import { ChatInterface } from '../components/ChatInterface'
 import { useWebSocket } from '../hooks/useWebSocket'
 
 export default function Home() {
@@ -34,11 +35,17 @@ export default function Home() {
         {/* Main Layout */}
         {showControls ? (
           <div className="grid gap-6 lg:grid-cols-2 transition-all duration-300">
-            {/* Left Column - Video + Some Controls */}
+            {/* Left Column - Video + Chat */}
             <div className="space-y-6">
               <LivepeerPlayer className="w-full" />
               
-              {/* Primary Controls under video */}
+              {/* Chat Interface directly below video */}
+              <ChatInterface 
+                websocketUrl={process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8080'}
+                className="w-full"
+              />
+              
+              {/* Secondary Controls under chat */}
               <div className="space-y-6">
                 <SecondaryControls 
                   sendCommand={sendCommand} 
@@ -56,9 +63,13 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          /* Full width video when controls hidden */
-          <div className="max-w-4xl mx-auto">
+          /* Full width video and chat when controls hidden */
+          <div className="max-w-4xl mx-auto space-y-6">
             <LivepeerPlayer className="w-full" />
+            <ChatInterface 
+              websocketUrl={process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8080'}
+              className="w-full"
+            />
           </div>
         )}
         

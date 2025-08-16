@@ -8,16 +8,20 @@ interface WebSocketMessage {
   command?: string
   clientId?: string
   details?: string
+  user_message?: string
+  ai_response?: string
 }
 
 interface UseWebSocketReturn {
   isConnected: boolean
   isAuthenticated: boolean
   sendCommand: (command: string) => Promise<boolean>
+  sendMessage: (message: string) => Promise<boolean>
   connectionStatus: string
   error: string | null
   connect: () => void
   disconnect: () => void
+  onMessage: (callback: (data: WebSocketMessage) => void) => void
 }
 
 export function useWebSocket(url: string): UseWebSocketReturn {
@@ -29,6 +33,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const authTokenRef = useRef<string | null>(null)
+  const messageCallbacksRef = useRef<((data: WebSocketMessage) => void)[]>([])
   
   const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -78,6 +83,15 @@ export function useWebSocket(url: string): UseWebSocketReturn {
         try {
           const data: WebSocketMessage = JSON.parse(event.data)
           
+          // Call all registered callbacks
+          messageCallbacksRef.current.forEach(callback => {
+            try {
+              callback(data)
+            } catch (err) {
+              console.error('Error in message callback:', err)
+            }
+          })
+          
           switch (data.type) {
             case 'welcome':
               setConnectionStatus(`Connected - ${data.message}`)
@@ -101,6 +115,10 @@ export function useWebSocket(url: string): UseWebSocketReturn {
               
             case 'error':
               setError(`Error: ${data.message}`)
+              break
+              
+            case 'chat_response':
+              // Chat response handled by callbacks
               break
               
             default:
@@ -181,6 +199,29 @@ export function useWebSocket(url: string): UseWebSocketReturn {
       return false
     }
   }, [isConnected, isAuthenticated])
+
+  const sendMessage = useCallback(async (message: string): Promise<boolean> => {
+    if (!wsRef.current || !isConnected || !isAuthenticated) {
+      setError('Not connected or authenticated')
+      return false
+    }
+
+    try {
+      wsRef.current.send(message)
+      return true
+    } catch (err) {
+      setError(`Failed to send message: ${err}`)
+      return false
+    }
+  }, [isConnected, isAuthenticated])
+
+  const onMessage = useCallback((callback: (data: WebSocketMessage) => void) => {
+    messageCallbacksRef.current.push(callback)
+    
+    return () => {
+      messageCallbacksRef.current = messageCallbacksRef.current.filter(cb => cb !== callback)
+    }
+  }, [])
   
   useEffect(() => {
     connect()
@@ -194,9 +235,11 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     isConnected,
     isAuthenticated,
     sendCommand,
+    sendMessage,
     connectionStatus,
     error,
     connect,
-    disconnect
+    disconnect,
+    onMessage
   }
 }

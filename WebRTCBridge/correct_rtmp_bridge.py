@@ -15,13 +15,18 @@ import queue
 from dataclasses import dataclass
 import sys
 
-# Configure production-grade logging
+# Configure production-grade logging with UTF-8 encoding
+# Create UTF-8 compatible stream handler
+import io
+
+utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('streaming_performance.log', mode='a')
+        logging.StreamHandler(utf8_stdout),
+        logging.FileHandler('streaming_performance.log', mode='a', encoding='utf-8')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -264,12 +269,14 @@ class ProductionFrameReceiver:
         logger.info(f"Frame receiver stopped - Stats: {self.get_statistics()}")
 
 class OptimizedRTMPStreamer:
-    """Production-grade RTMP streamer with RTMP connection monitoring"""
+    """Production-grade RTMP streamer with RTMP connection monitoring and audio support"""
     
-    def __init__(self, rtmp_url):
+    def __init__(self, rtmp_url, enable_audio=False):
         self.rtmp_url = rtmp_url
         self.process = None
         self.running = False
+        self.enable_audio = enable_audio
+        self.audio_device = None
         
         # Statistics
         self.frames_sent = 0
@@ -281,49 +288,87 @@ class OptimizedRTMPStreamer:
         self.connection_alive = True
         self.last_rtmp_error = None
         
-    def start(self):
-        """Start optimized FFmpeg RTMP stream"""
-        logger.info(f"Starting optimized RTMP stream to: {self.rtmp_url}")
+        # Frame timing for sync
+        self.stream_start_time = None
+        self.frame_number = 0
         
-        # Ultra-stable FFmpeg command - reduced bitrate and smoother encoding
-        cmd = [
-            'ffmpeg', '-y',
+    def _select_audio_device(self):
+        """Select audio device using DirectShow (since WASAPI not available)"""
+        try:
+            # List DirectShow audio devices
+            cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', '-list_devices', 'true', '-i', 'dummy']
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             
-            # Input: MJPEG frames from Unreal Engine
-            '-f', 'image2pipe',
-            '-vcodec', 'mjpeg', 
-            '-i', 'pipe:0',
+            audio_devices = []
+            output = result.stderr
             
-            # Ultra-stable encoding pipeline - prioritize consistent bitrate
-            '-c:v', 'libx264',
-            '-preset', 'ultrafast',      # Ultra-fast encoding for minimum latency
-            '-tune', 'zerolatency',      # Ultra-low latency encoding
-            '-crf', '23',                # Even higher CRF for ultra-stable bitrate
-            '-maxrate', '1200k',         # Further reduced max bitrate
-            '-bufsize', '600k',          # Smaller buffer for faster response
-            '-minrate', '600k',          # Higher minimum bitrate for consistency
+            for line in output.split('\n'):
+                if '(audio)' in line and '"' in line:
+                    start = line.find('"') + 1
+                    end = line.find('"', start)
+                    if start > 0 and end > start:
+                        device_name = line[start:end]
+                        audio_devices.append(device_name)
+                        logger.info(f"Found DirectShow audio device: {device_name}")
             
-            # Simplified processing chain
-            '-vf', 'format=yuv420p,fps=20',  # Force 20fps for ultra-stability
+            # Priority order - looking for output devices, avoiding input devices
+            # Check for Realtek output devices first, then others, avoid microphones
+            priority_keywords = [
+                ('speakers', 'Speakers'),               # Speakers/output devices
+                ('headphones', 'Headphones'),          # Headphone output
+                ('realtek', 'Realtek Audio'),          # Any Realtek device
+                ('stereo mix', 'Stereo Mix')           # System audio mix (last resort)
+            ]
             
-            # Ultra-stable x264 parameters - eliminate all variability
-            '-x264-params', 'aq-mode=0:ref=1:bframes=0:rc-lookahead=0:scenecut=0:keyint=40:min-keyint=20:qpmin=25:qpmax=35:crf-max=30:vbv-init=0.5',
-            '-g', '40',                  # Smaller GOP for 20fps (keyframe every 2 seconds)
-            '-keyint_min', '20',         # Keyframe every second at 20fps
-            '-profile:v', 'baseline',    # Baseline profile
-            '-level', '3.0',             # H.264 level 3.0
+            # Exclude these input device keywords
+            exclude_keywords = ['microphone', 'mic', 'analogue 1', 'analogue 2', 'input']
             
-            # Force constant frame rate with strict timing
-            '-r', '20',                  # Ultra-stable 20fps
-            '-vsync', 'cfr',             # Constant frame rate (most stable)
-            '-force_fps',                # Force frame rate
+            for keyword, display_name in priority_keywords:
+                for device in audio_devices:
+                    device_lower = device.lower()
+                    if keyword in device_lower:
+                        # Skip if it's an input device
+                        if any(exclude in device_lower for exclude in exclude_keywords):
+                            logger.info(f"AUDIO: Skipping input device: {device}")
+                            continue
+                        
+                        # Test if device works
+                        test_cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', 
+                                  '-i', f'audio={device}', '-t', '0.1', '-f', 'null', '-']
+                        try:
+                            test_result = subprocess.run(test_cmd, capture_output=True, timeout=3)
+                            if test_result.returncode == 0:
+                                logger.info(f"AUDIO: Selected DirectShow device: {device}")
+                                if 'stereo mix' in device_lower:
+                                    logger.warning("WARNING: Using Stereo Mix - may cause echo with speakers!")
+                                    logger.info("TIP: Use headphones to avoid echo")
+                                else:
+                                    logger.info("AUDIO: Using output device (should avoid echo)")
+                                return device
+                        except Exception as e:
+                            logger.warning(f"Device test failed for {device}: {e}")
+                            continue
             
-            # Streaming optimizations for minimal jitter
-            '-f', 'flv',
-            '-flvflags', 'no_duration_filesize+no_metadata',
-            '-fflags', '+flush_packets+genpts',  # Flush packets immediately
-            self.rtmp_url
-        ]
+            # If no suitable device found
+            if audio_devices:
+                logger.warning(f"No suitable audio output device found, available devices:")
+                for device in audio_devices:
+                    logger.warning(f"  - {device}")
+                return None
+            
+            logger.error("ERROR: No DirectShow audio devices found!")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error selecting audio device: {e}")
+            return None
+        
+    def start(self):
+        """Start optimized FFmpeg RTMP stream with optional audio"""
+        logger.info(f"Starting optimized RTMP stream to: {self.rtmp_url} (audio: {self.enable_audio})")
+        
+        # Build FFmpeg command with or without audio
+        cmd = self._build_ffmpeg_command()
         
         try:
             self.process = subprocess.Popen(
@@ -347,6 +392,117 @@ class OptimizedRTMPStreamer:
         except Exception as e:
             logger.error(f"Failed to start RTMP stream: {e}")
             return False
+    
+    def _build_ffmpeg_command(self):
+        """Build FFmpeg command with proper audio sync"""
+        if self.enable_audio:
+            # Select audio device
+            self.audio_device = self._select_audio_device()
+            
+            # Command with audio and video
+            cmd = [
+                'ffmpeg', '-y',
+                
+                # Video input: MJPEG frames from Unreal Engine
+                '-f', 'image2pipe',
+                '-vcodec', 'mjpeg',
+                '-framerate', '20',  # Explicitly set input framerate
+                '-i', 'pipe:0',
+                
+                # Audio input: DirectShow with proper buffering for sync  
+                '-f', 'dshow',
+                '-audio_buffer_size', '50',      # Match video frame time (50ms at 20fps)
+                '-rtbufsize', '512k',             # Reasonable buffer (2.6 seconds of audio)
+                '-i', f'audio={self.audio_device}',  # Use detected DirectShow audio device
+                
+                # CRITICAL: Set reference timestamps for sync
+                '-use_wallclock_as_timestamps', '1',  # Use system clock
+                '-thread_queue_size', '512',          # Adequate queue size
+            
+                # Video encoding with audio sync
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',      # Ultra-fast encoding for minimum latency
+                '-tune', 'zerolatency',      # Ultra-low latency encoding
+                '-crf', '23',                # Even higher CRF for ultra-stable bitrate
+                '-maxrate', '1200k',         # Further reduced max bitrate
+                '-bufsize', '600k',          # Smaller buffer for faster response
+                '-minrate', '600k',          # Higher minimum bitrate for consistency
+                
+                # Audio encoding
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-ar', '48000',
+                '-ac', '2',
+                
+                # Use filter_complex for precise sync
+                '-filter_complex',
+                '[0:v]fps=20,setpts=N/20/TB[v];'
+                '[1:a]aresample=async=1:min_hard_comp=0.100000:first_pts=0[a]',
+                
+                '-map', '[v]',
+                '-map', '[a]',
+                
+                # Ultra-stable x264 parameters - eliminate all variability
+                '-x264-params', 'aq-mode=0:ref=1:bframes=0:rc-lookahead=0:scenecut=0:keyint=40:min-keyint=20:qpmin=25:qpmax=35:crf-max=30:vbv-init=0.5',
+                '-g', '40',                  # Smaller GOP for 20fps (keyframe every 2 seconds)
+                '-keyint_min', '20',         # Keyframe every second at 20fps
+                '-profile:v', 'baseline',    # Baseline profile
+                '-level', '3.0',             # H.264 level 3.0
+                
+                # Synchronization flags for proper A/V sync
+                '-vsync', 'cfr',        # Constant frame rate
+                '-async', '1',          # Audio sync
+                '-copyts',              # Preserve timestamps
+                '-start_at_zero',       # Start at zero
+                
+                # Force constant frame rate with strict timing
+                '-r', '20',                  # Ultra-stable 20fps
+                '-force_fps',                # Force frame rate
+                
+                # Streaming optimizations for minimal jitter
+                '-f', 'flv',
+                '-flvflags', 'no_duration_filesize+no_metadata',
+                '-fflags', '+flush_packets+genpts',  # Flush packets immediately
+                self.rtmp_url
+            ]
+        else:
+            # Video-only command
+            cmd = [
+                'ffmpeg', '-y',
+                
+                # Input: MJPEG frames from Unreal Engine
+                '-f', 'image2pipe',
+                '-vcodec', 'mjpeg', 
+                '-i', 'pipe:0',
+                
+                # Ultra-stable encoding pipeline
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',
+                '-tune', 'zerolatency',
+                '-crf', '23',
+                '-maxrate', '1200k',
+                '-bufsize', '600k',
+                '-minrate', '600k',
+                
+                '-vf', 'format=yuv420p,fps=20',
+                
+                '-x264-params', 'aq-mode=0:ref=1:bframes=0:rc-lookahead=0:scenecut=0:keyint=40:min-keyint=20:qpmin=25:qpmax=35:crf-max=30:vbv-init=0.5',
+                '-g', '40',
+                '-keyint_min', '20',
+                '-profile:v', 'baseline',
+                '-level', '3.0',
+                
+                '-r', '20',
+                '-vsync', 'cfr',
+                '-force_fps',
+                
+                '-f', 'flv',
+                '-flvflags', 'no_duration_filesize+no_metadata',
+                '-fflags', '+flush_packets+genpts',
+                self.rtmp_url
+            ]
+        
+        return cmd
     
     def _monitor_ffmpeg_stderr(self):
         """Monitor FFmpeg stderr for RTMP connection issues"""
@@ -381,49 +537,48 @@ class OptimizedRTMPStreamer:
             logger.debug(f"Stderr monitoring error: {e}")
     
     def send_frame(self, jpeg_data):
-        """Send JPEG frame with RTMP connection validation and jitter reduction"""
+        """Send JPEG frame with precise timing for A/V sync"""
         if not self.running or not self.process:
             return False
         
-        # Check if RTMP connection is alive
-        if not self.connection_alive:
-            logger.warning(f"RTMP connection is down: {self.last_rtmp_error}")
-            self.running = False
-            return False
+        # Initialize timing on first frame
+        if not hasattr(self, 'stream_start_time'):
+            self.stream_start_time = time.time()
+            self.frame_number = 0
+            self.last_frame_time = self.stream_start_time
         
-        # Quick process health check
-        if self.process.poll() is not None:
-            logger.warning("FFmpeg process died")
-            self.running = False
-            return False
+        # Calculate exact timing for this frame
+        frame_duration = 1.0 / 20.0  # 50ms per frame at 20fps
+        target_time = self.stream_start_time + (self.frame_number * frame_duration)
+        current_time = time.time()
         
-        # Validate JPEG data
+        # If we're ahead, wait
+        if current_time < target_time:
+            sleep_time = target_time - current_time
+            if sleep_time > 0.001:  # Only sleep if more than 1ms
+                time.sleep(sleep_time)
+        
+        # If we're behind, log it but continue
+        elif current_time - target_time > 0.050:  # More than 50ms behind
+            drift = current_time - target_time
+            logger.warning(f"WARNING: Video timing drift: {drift*1000:.1f}ms behind schedule")
+        
+        # Validate and send frame
         if not jpeg_data or len(jpeg_data) < 10:
             self.frames_failed += 1
             return False
-            
-        # Validate JPEG header
+        
         if jpeg_data[0] != 0xFF or jpeg_data[1] != 0xD8:
+            logger.error(f"Invalid JPEG header")
             self.frames_failed += 1
             return False
-        
-        # Ultra-stable frame pacing - target 20fps (50ms between frames)
-        current_time = time.time()
-        if hasattr(self, 'last_frame_time'):
-            target_interval = 1.0 / 20.0  # 20fps = 50ms for ultra-stability
-            elapsed = current_time - self.last_frame_time
-            if elapsed < target_interval:
-                # Precise sleep to maintain exact 20fps timing
-                sleep_time = target_interval - elapsed
-                if sleep_time > 0:
-                    time.sleep(min(sleep_time, 0.01))  # Reduced max sleep to 10ms
-        
-        self.last_frame_time = current_time
         
         try:
             self.process.stdin.write(jpeg_data)
             self.process.stdin.flush()
             self.frames_sent += 1
+            self.frame_number += 1
+            self.last_frame_time = time.time()
             return True
         except Exception as e:
             logger.error(f"Frame send error: {e}")
@@ -439,12 +594,17 @@ class OptimizedRTMPStreamer:
         
         return {
             'frames_sent': self.frames_sent,
-            'frames_failed': self.frames_failed, 
+            'frames_failed': self.frames_failed,
+            'audio_chunks_sent': 0,  # Audio handled by FFmpeg DirectShow
             'fps': fps,
             'success_rate': success_rate,
             'elapsed_time': elapsed,
             'rtmp_connection_alive': self.connection_alive,
-            'last_rtmp_error': self.last_rtmp_error
+            'last_rtmp_error': self.last_rtmp_error,
+            'audio_enabled': self.enable_audio,
+            'audio_device': self.audio_device,  # Changed from audio_method
+            'encoder': 'libx264',
+            'raw_frames_enabled': False
         }
     
     def stop(self):
@@ -461,23 +621,25 @@ class OptimizedRTMPStreamer:
         logger.info(f"RTMP streaming stopped - Stats: {stats}")
 
 class ProductionWebRTCBridge:
-    """Production-ready WebRTC to RTMP bridge with bulletproof reliability"""
+    """Production-ready WebRTC to RTMP bridge with bulletproof reliability and audio support"""
     
-    def __init__(self, config: LivepeerConfig):
+    def __init__(self, config: LivepeerConfig, enable_audio=False):
         self.config = config
         self.frame_receiver = ProductionFrameReceiver(port=5000)
         self.rtmp_streamer = None
         self.running = False
+        self.enable_audio = enable_audio
         
         # Statistics
         self.start_time = None
         self.last_stats_time = 0
         
     def start(self):
-        """Start production bridge"""
+        """Start production bridge with optional audio"""
         logger.info("=== PRODUCTION WEBRTC BRIDGE STARTING ===")
         logger.info(f"Stream ID: {self.config.stream_id}")
         logger.info(f"Playback ID: {self.config.playback_id}")
+        logger.info(f"Audio Enabled: {self.enable_audio}")
         logger.info("=== OPTIMIZED FOR 100% RELIABILITY ===")
         
         # Start frame receiver
@@ -485,9 +647,9 @@ class ProductionWebRTCBridge:
             logger.error("Failed to start frame receiver")
             return False
         
-        # Start RTMP streaming  
+        # Start RTMP streaming with audio support
         rtmp_url = f"{self.config.rtmp_url}/{self.config.stream_key}"
-        self.rtmp_streamer = OptimizedRTMPStreamer(rtmp_url)
+        self.rtmp_streamer = OptimizedRTMPStreamer(rtmp_url, enable_audio=self.enable_audio)
         
         if not self.rtmp_streamer.start():
             logger.error("Failed to start RTMP streaming")
@@ -568,14 +730,22 @@ def main():
     print("==================================")
     print("Bulletproof reliability - Ultra-low latency")
     print("Optimized FFmpeg pipeline - Stable 20fps")
+    print("Audio Support: Line In Priority")
+    
+    # Ask user if they want audio
+    import sys
+    enable_audio = '--audio' in sys.argv or '-a' in sys.argv
     
     config = LivepeerConfig()
-    bridge = ProductionWebRTCBridge(config)
+    bridge = ProductionWebRTCBridge(config, enable_audio=enable_audio)
     
     try:
         print(f"\nStream ID: {config.stream_id}")
         print(f"Playbook ID: {config.playback_id}")  
         print(f"Playback URL: https://livepeercdn.com/hls/{config.playback_id}/index.m3u8")
+        print(f"Audio Enabled: {enable_audio}")
+        if enable_audio:
+            print("Audio Source: Line In (Realtek(R) Audio) - Priority")
         print("==================================")
         print("Press Ctrl+C to stop")
         print()

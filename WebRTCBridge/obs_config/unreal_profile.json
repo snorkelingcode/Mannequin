@@ -1,0 +1,31 @@
+{
+  "Output": {
+    "Mode": "Simple",
+    "SimpleOutputPath": "C:\\Users\\danek\\Videos",
+    "SimpleOutputVideoBitrate": 6000,
+    "SimpleOutputAudioBitrate": 160,
+    "SimpleOutputVideoEncoder": "x264",
+    "SimpleOutputStreamingServer": "rtmp://localhost/live",
+    "SimpleOutputStreamingKey": "test"
+  },
+  "Video": {
+    "BaseCX": 1920,
+    "BaseCY": 1080,
+    "OutputCX": 1920,
+    "OutputCY": 1080,
+    "FPSType": "Common",
+    "FPSCommon": "30"
+  },
+  "Audio": {
+    "SampleRate": 48000,
+    "ChannelSetup": "Stereo",
+    "Desktop1": {
+      "Enabled": true,
+      "Volume": 1.0
+    },
+    "Mic1": {
+      "Enabled": false,
+      "Volume": 0.0
+    }
+  }
+}

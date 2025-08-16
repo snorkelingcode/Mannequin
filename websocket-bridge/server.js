@@ -4,7 +4,16 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const express = require('express');
 const cors = require('cors');
+const OpenAI = require('openai');
+const axios = require('axios');
 require('dotenv').config();
+
+// Initialize OpenAI
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
+const EGIRL_PERSONA = process.env.EGIRL_PERSONA_PROMPT || "You are a playful, flirty Twitch e-girl personality. Respond with enthusiasm, use cute expressions, and be engaging. Keep responses under 100 words.";
 
 // Security configuration
 const CONFIG = {
@@ -17,6 +26,63 @@ const CONFIG = {
     RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes
     RATE_LIMIT_MAX: 1000, // Max requests per window
 };
+
+// Chat processing functions
+async function processUserChat(userMessage) {
+    try {
+        console.log(`Processing chat: ${userMessage}`);
+        
+        const completion = await openai.chat.completions.create({
+            model: process.env.CHATGPT_MODEL || 'gpt-3.5-turbo',
+            messages: [
+                {
+                    role: 'system',
+                    content: EGIRL_PERSONA
+                },
+                {
+                    role: 'user',
+                    content: userMessage
+                }
+            ],
+            max_tokens: 150,
+            temperature: 0.8
+        });
+
+        const response = completion.choices[0].message.content.trim();
+        console.log(`ChatGPT response: ${response}`);
+        
+        // Send to text-to-face hook
+        if (process.env.TEXT_TO_FACE_ENABLED === 'true') {
+            await sendToTextToFaceHook(response);
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('Error processing chat:', error);
+        throw error;
+    }
+}
+
+async function sendToTextToFaceHook(text) {
+    try {
+        const hookUrl = process.env.TEXT_TO_FACE_HOOK_URL || 'http://localhost:8001/chat_response';
+        
+        const response = await axios.post(hookUrl, {
+            text: text
+        }, {
+            timeout: 5000,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log(`Text-to-face hook response: ${response.data.message}`);
+        return true;
+    } catch (error) {
+        console.error('Failed to send to text-to-face hook:', error.message);
+        return false;
+    }
+}
 
 // Validate commands against known patterns
 const VALID_COMMAND_PATTERNS = [
@@ -267,6 +333,57 @@ wss.on('connection', (ws, req) => {
                 return;
             }
             
+            // Handle chat messages  
+            if (data.type === 'chat') {
+                if (!connection || !connection.authenticated) {
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        message: 'Authentication required'
+                    }));
+                    return;
+                }
+                
+                // Validate chat message
+                if (!data.message || typeof data.message !== 'string') {
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        message: 'Invalid chat message format'
+                    }));
+                    return;
+                }
+                
+                // Sanitize message
+                const userMessage = data.message.trim();
+                if (userMessage.length === 0 || userMessage.length > 500) {
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        message: 'Chat message must be between 1-500 characters'
+                    }));
+                    return;
+                }
+                
+                try {
+                    const aiResponse = await processUserChat(userMessage);
+                    
+                    ws.send(JSON.stringify({
+                        type: 'chat_response',
+                        message: 'Chat processed successfully',
+                        user_message: userMessage,
+                        ai_response: aiResponse
+                    }));
+                    
+                    console.log(`Chat processed for ${clientId}: "${userMessage}" -> "${aiResponse}"`);
+                } catch (error) {
+                    ws.send(JSON.stringify({
+                        type: 'error',
+                        message: 'Failed to process chat message',
+                        details: error.message
+                    }));
+                    console.error(`Chat processing failed for ${clientId}:`, error.message);
+                }
+                return;
+            }
+
             // Check if authenticated for command messages
             if (data.type === 'command') {
                 if (!connection || !connection.authenticated) {

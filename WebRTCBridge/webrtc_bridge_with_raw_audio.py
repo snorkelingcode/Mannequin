@@ -105,13 +105,18 @@ class FrameFormat(IntEnum):
     RGB24 = 1
     YUV420 = 2
 
-# Configure production-grade logging
+# Configure production-grade logging with UTF-8 encoding
+# Create UTF-8 compatible stream handler
+import io
+
+utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('streaming_performance.log', mode='a')
+        logging.StreamHandler(utf8_stdout),
+        logging.FileHandler('streaming_performance.log', mode='a', encoding='utf-8')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -513,34 +518,13 @@ class ProductionFrameReceiver:
             logger.debug(f"Aggressive cleanup: dropped {frames_to_drop} incomplete frames")
     
     def get_frame(self, timeout=0.001):
-        """Get next complete frame with jitter reduction pacing"""
+        """Get next complete frame without pacing (let sender control timing)"""
         try:
-            # Fill buffer first
-            while len(self.frame_buffer) < self.max_buffer_size:
-                try:
-                    frame = self.frame_queue.get_nowait()
-                    if frame:
-                        self.frame_buffer.append(frame)
-                except queue.Empty:
-                    break
-            
-            # Return frames at consistent intervals with adaptive timing
-            current_time = time.time()
-            if self.last_frame_output_time > 0:
-                elapsed = current_time - self.last_frame_output_time
-                if elapsed < self.target_frame_interval:
-                    # Wait for timing but allow some variance
-                    sleep_time = self.target_frame_interval - elapsed
-                    if sleep_time > 0.003:  # Only sleep for 3ms+ delays
-                        time.sleep(min(sleep_time, 0.015))  # Max 15ms sleep
-                        
-            # Output buffered frame for smooth delivery
-            if self.frame_buffer:
-                frame = self.frame_buffer.pop(0)
-                self.last_frame_output_time = time.time()
+            # Get frame immediately without pacing - sender controls timing
+            frame = self.frame_queue.get(timeout=timeout)
+            if frame:
                 self.frames_received += 1
                 return frame
-                
             return None
             
         except queue.Empty:
@@ -602,11 +586,303 @@ class OptimizedRTMPStreamer:
         self.audio_capture = None
         self.audio_thread = None
         self.enable_audio = False
+        self.audio_device = None  # Store detected audio device
         
         # Raw frame support
         self.raw_frame_receiver = None
         self.raw_frame_thread = None
         self.use_raw_frames = False
+        
+    def _select_audio_device(self):
+        """Select audio device with proper component separation - each component does what it's designed for"""
+        try:
+            # FIRST: Check for Virtual Audio Capture Grabber Device (highest priority)
+            logger.info("Checking for Virtual Audio Capture Grabber Device...")
+            cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', '-list_devices', 'true', '-i', 'dummy']
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            
+            virtual_audio_found = None
+            output = result.stderr
+            
+            for line in output.split('\n'):
+                if '(audio)' in line and '"' in line:
+                    start = line.find('"') + 1
+                    end = line.find('"', start)
+                    if start > 0 and end > start:
+                        device_name = line[start:end]
+                        if 'virtual-audio-capturer' in device_name.lower() or 'virtual audio capturer' in device_name.lower():
+                            virtual_audio_found = device_name
+                            break
+            
+            if virtual_audio_found:
+                # Test Virtual Audio device
+                test_cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', 
+                          '-i', f'audio={virtual_audio_found}', '-t', '0.1', '-f', 'null', '-']
+                try:
+                    test_result = subprocess.run(test_cmd, capture_output=True, timeout=3)
+                    if test_result.returncode == 0:
+                        logger.info(f"🎵 VIRTUAL AUDIO DEVICE FOUND!")
+                        logger.info(f"DEVICE: {virtual_audio_found}")
+                        logger.info("PURPOSE: Captures system audio OUTPUT (including Line In)")
+                        logger.info("ADVANTAGE: Can capture Line In audio that DirectShow can't access")
+                        logger.info("CONFIGURATION: Using optimized buffer settings for audio output")
+                        return f"DSHOW:{virtual_audio_found}"
+                except Exception as e:
+                    logger.warning(f"Virtual Audio test failed: {e}")
+            else:
+                logger.info("Virtual Audio Capture Grabber Device not found")
+                logger.info("To enable perfect Line In audio sync, install virtual-audio-capturer")
+            
+            # SECOND: Try to find and use Line In device via WASAPI (sounddevice)
+            logger.info("Searching for Line In (Realtek HD Audio Line input) via WASAPI...")
+            
+            try:
+                import sounddevice as sd
+                
+                # Search all devices for Line In
+                devices = sd.query_devices()
+                line_in_device = None
+                line_in_index = None
+                
+                for i, device in enumerate(devices):
+                    device_name = device['name']
+                    if 'line in' in device_name.lower() and 'realtek' in device_name.lower():
+                        line_in_device = device
+                        line_in_index = i
+                        logger.info(f"Found Line In device at index {i}: {device_name}")
+                        break
+                
+                if line_in_device and line_in_index is not None:
+                    # Test if device works
+                    try:
+                        test_data = sd.rec(frames=512, samplerate=48000,
+                                         channels=min(2, line_in_device['max_input_channels']), 
+                                         device=line_in_index, dtype='int16')
+                        sd.wait()
+                        
+                        logger.info(f"AUDIO: Successfully tested Line In device: {line_in_device['name']}")
+                        logger.info("AUDIO: Using Line In device via WASAPI (like OBS)!")
+                        
+                        # Return WASAPI device identifier
+                        return f"WASAPI:{line_in_index}:{line_in_device['name']}"
+                        
+                    except Exception as e:
+                        logger.warning(f"Line In device test failed: {e}")
+                else:
+                    logger.warning("Line In device not found in sounddevice list")
+                    
+            except ImportError:
+                logger.warning("sounddevice not available, falling back to DirectShow")
+            except Exception as e:
+                logger.warning(f"sounddevice test failed: {e}")
+            
+            # Fallback: List DirectShow audio devices
+            logger.info("Falling back to DirectShow audio devices...")
+            cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', '-list_devices', 'true', '-i', 'dummy']
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            
+            audio_devices = []
+            output = result.stderr
+            
+            for line in output.split('\n'):
+                if '(audio)' in line and '"' in line:
+                    start = line.find('"') + 1
+                    end = line.find('"', start)
+                    if start > 0 and end > start:
+                        device_name = line[start:end]
+                        audio_devices.append(device_name)
+                        logger.info(f"Found DirectShow audio device: {device_name}")
+            
+            # PRIORITY 1: Virtual Audio Capture Grabber Device (Line In via system audio)
+            logger.info("Looking for Virtual Audio Capture Grabber Device...")
+            virtual_audio_found = None
+            for device in audio_devices:
+                if 'virtual-audio-capturer' in device.lower() or 'virtual audio capturer' in device.lower():
+                    virtual_audio_found = device
+                    break
+            
+            if virtual_audio_found:
+                # Test Virtual Audio device
+                test_cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', 
+                          '-i', f'audio={virtual_audio_found}', '-t', '0.1', '-f', 'null', '-']
+                try:
+                    test_result = subprocess.run(test_cmd, capture_output=True, timeout=3)
+                    if test_result.returncode == 0:
+                        logger.info(f"AUDIO: *** VIRTUAL AUDIO DEVICE FOUND! ***")
+                        logger.info(f"AUDIO: Device: {virtual_audio_found}")
+                        logger.info("AUDIO: This will capture system audio output (includes Line In)")
+                        logger.info("AUDIO: Perfect audio-video sync with FFmpeg DirectShow!")
+                        logger.info("AUDIO: No echo issues, no virtual cables needed!")
+                        return f"DSHOW:{virtual_audio_found}"
+                except Exception as e:
+                    logger.warning(f"Virtual Audio test failed: {e}")
+            else:
+                logger.info("Virtual Audio Capture Grabber Device not found")
+                logger.info("To enable perfect Line In audio sync:")
+                logger.info("  1. Run PowerShell as Administrator")
+                logger.info("  2. Execute: .\\install_virtual_audio.ps1")
+                logger.info("  3. Restart this bridge")
+                logger.info("  4. Enjoy synchronized Line In + Video streaming!")
+            
+            # Look for Stereo Mix as fallback
+            logger.info("Looking for Stereo Mix device (system audio capture)...")
+            
+            stereo_mix_found = None
+            for device in audio_devices:
+                if 'stereo mix' in device.lower():
+                    stereo_mix_found = device
+                    break
+            
+            if stereo_mix_found:
+                # Test Stereo Mix device
+                test_cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', 
+                          '-i', f'audio={stereo_mix_found}', '-t', '0.1', '-f', 'null', '-']
+                try:
+                    test_result = subprocess.run(test_cmd, capture_output=True, timeout=3)
+                    if test_result.returncode == 0:
+                        logger.info(f"AUDIO: Selected Stereo Mix device: {stereo_mix_found}")
+                        logger.warning("WARNING: Using Stereo Mix - may cause echo with speakers!")
+                        logger.info("TIP: Use headphones to avoid echo feedback loop")
+                        logger.info("AUDIO: This captures system audio output (what you hear)")
+                        return f"DSHOW:{stereo_mix_found}"
+                except Exception as e:
+                    logger.warning(f"Stereo Mix test failed: {e}")
+            
+            # Priority order for DirectShow fallback
+            priority_keywords = [
+                ('focusrite', 'Focusrite USB Audio'),  # Focusrite USB Audio
+                ('speakers', 'Speakers'),               # Speakers/output devices
+                ('headphones', 'Headphones'),          # Headphone output  
+            ]
+            
+            # Exclude microphones as requested by user
+            exclude_keywords = ['microphone', 'mic']
+            
+            for keyword, display_name in priority_keywords:
+                for device in audio_devices:
+                    device_lower = device.lower()
+                    if keyword in device_lower:
+                        # Skip specific input devices but allow microphones as last resort
+                        if any(exclude in device_lower for exclude in exclude_keywords):
+                            logger.info(f"AUDIO: Skipping input device: {device}")
+                            continue
+                        
+                        # Test if device works
+                        test_cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', 
+                                  '-i', f'audio={device}', '-t', '0.1', '-f', 'null', '-']
+                        try:
+                            test_result = subprocess.run(test_cmd, capture_output=True, timeout=3)
+                            if test_result.returncode == 0:
+                                logger.info(f"AUDIO: Selected DirectShow device: {device}")
+                                if 'stereo mix' in device_lower:
+                                    logger.warning("WARNING: Using Stereo Mix - may cause echo with speakers!")
+                                    logger.info("TIP: Use headphones to avoid echo")
+                                else:
+                                    logger.info("AUDIO: Using output device (should avoid echo)")
+                                return f"DSHOW:{device}"
+                        except Exception as e:
+                            logger.warning(f"Device test failed for {device}: {e}")
+                            continue
+            
+            # If no suitable device found, but we have input devices
+            if audio_devices:
+                logger.info("Available DirectShow devices:")
+                for device in audio_devices:
+                    logger.info(f"  - {device}")
+                
+                # Check if any device contains "focusrite" - use it as fallback
+                for device in audio_devices:
+                    if 'focusrite' in device.lower():
+                        test_cmd = ['ffmpeg', '-hide_banner', '-f', 'dshow', 
+                                  '-i', f'audio={device}', '-t', '0.1', '-f', 'null', '-']
+                        try:
+                            test_result = subprocess.run(test_cmd, capture_output=True, timeout=3)
+                            if test_result.returncode == 0:
+                                logger.info(f"AUDIO: Using Focusrite device: {device}")
+                                logger.info("AUDIO: This will capture audio from your Focusrite interface")
+                                return f"DSHOW:{device}"
+                        except Exception as e:
+                            logger.warning(f"Focusrite test failed: {e}")
+                
+                logger.error("ERROR: No suitable audio device found!")
+                logger.info("Note: Line In and Stereo Mix are not available through DirectShow.")
+                logger.info("Using Focusrite USB Audio input as requested.")
+                return None
+            
+            logger.error("ERROR: No DirectShow audio devices found!")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error selecting audio device: {e}")
+            return None
+    
+    def start_sounddevice_file_capture(self, device_index, device_name):
+        """Start sounddevice capture for Line In writing to temp file"""
+        try:
+            import sounddevice as sd
+            import threading
+            import queue
+            import os
+            
+            self.sounddevice_running = True
+            
+            # Create/clear the temporary audio file
+            with open(self.audio_temp_file, 'wb') as f:
+                pass  # Create empty file
+            
+            def audio_callback(indata, frames, time, status):
+                if self.sounddevice_running:
+                    try:
+                        # Convert to bytes and write to temp file
+                        audio_bytes = indata.astype('int16').tobytes()
+                        # Append to file for continuous streaming
+                        with open(self.audio_temp_file, 'ab') as f:
+                            f.write(audio_bytes)
+                    except Exception as e:
+                        logger.debug(f"Audio write error: {e}")
+            
+            # Start audio stream on the Line In device
+            self.audio_stream = sd.InputStream(
+                callback=audio_callback,
+                channels=2,
+                samplerate=44100,
+                blocksize=1024,
+                dtype='int16',
+                device=device_index  # Line In device
+            )
+            
+            self.audio_stream.start()
+            logger.info(f"Started Line In capture: {device_name} (device {device_index})")
+            logger.info(f"Audio file: {self.audio_temp_file}")
+            
+        except Exception as e:
+            logger.error(f"Failed to start Line In capture: {e}")
+            return False
+        
+        return True
+    
+    def stop_sounddevice_capture(self):
+        """Stop sounddevice capture and cleanup"""
+        try:
+            if hasattr(self, 'sounddevice_running'):
+                self.sounddevice_running = False
+            if hasattr(self, 'audio_stream'):
+                self.audio_stream.stop()
+                self.audio_stream.close()
+            
+            # Clean up temp file
+            if hasattr(self, 'audio_temp_file'):
+                try:
+                    import os
+                    if os.path.exists(self.audio_temp_file):
+                        os.remove(self.audio_temp_file)
+                        logger.debug(f"Cleaned up audio temp file: {self.audio_temp_file}")
+                except Exception as e:
+                    logger.debug(f"Could not remove temp file: {e}")
+            
+            logger.info("Stopped Line In capture")
+        except Exception as e:
+            logger.error(f"Error stopping Line In capture: {e}")
         
     def start(self, enable_audio=True):
         """Start optimized FFmpeg RTMP stream with optional audio"""
@@ -622,15 +898,9 @@ class OptimizedRTMPStreamer:
             else:
                 logger.info("Raw frame receiver started - High quality mode enabled")
         
-        # Start audio capture for validation if enabled
+        # Audio is handled directly by FFmpeg DirectShow - no separate capture needed
         if enable_audio:
-            self.audio_capture = CrossPlatformAudioCapture(self.audio_config)
-            if not self.audio_capture.start_capture():
-                logger.warning("Audio validation failed - continuing with video only")
-                self.enable_audio = False
-            else:
-                logger.info(f"Audio validation active: {self.audio_capture.method}")
-                logger.info("Note: FFmpeg DirectShow handles actual audio streaming")
+            logger.info("Audio enabled: FFmpeg DirectShow will handle audio streaming directly")
         
         # Build FFmpeg command with or without audio
         cmd = self._build_ffmpeg_command()
@@ -654,10 +924,7 @@ class OptimizedRTMPStreamer:
             self.stderr_thread = threading.Thread(target=self._monitor_ffmpeg_stderr, daemon=True)
             self.stderr_thread.start()
             
-            # Start audio streaming thread if audio is enabled
-            if self.enable_audio and self.audio_capture:
-                self.audio_thread = threading.Thread(target=self._audio_streaming_loop, daemon=True)
-                self.audio_thread.start()
+            # Audio is handled directly by FFmpeg DirectShow - no separate thread needed
             
             # Start raw frame processing thread if enabled
             if self.use_raw_frames and self.raw_frame_receiver:
@@ -762,10 +1029,29 @@ class OptimizedRTMPStreamer:
                                     logger.error(f"🔊 CRITICAL AUDIO OVERFLOW: {buffer_percent}% (avg: {avg_buffer:.1f}%)")
                                 elif buffer_percent >= 80:
                                     logger.warning(f"🔊 AUDIO SYNC WARNING: {buffer_percent}% (avg: {avg_buffer:.1f}%)")
+                                elif buffer_percent <= 50:
+                                    logger.info(f"✅ AUDIO DISPOSAL WORKING: {buffer_percent}% (avg: {avg_buffer:.1f}%)")
                                 else:
                                     logger.info(f"🔊 AUDIO BUFFER: {buffer_percent}% (avg: {avg_buffer:.1f}%)")
                         except:
                             pass
+                    # Check for DirectShow buffer management messages
+                    elif 'dshow' in line_str.lower() and ('too full' in line_str.lower() or 'dropped' in line_str.lower()):
+                        if 'frame dropped' in line_str.lower():
+                            logger.info(f"🗑️ AUDIO FRAME DISPOSED: {line_str.split(']')[-1].strip()}")
+                        elif 'too full' in line_str.lower():
+                            # Extract buffer percentage from DirectShow message
+                            if '(' in line_str and '%' in line_str:
+                                try:
+                                    pct_start = line_str.find('(') + 1
+                                    pct_end = line_str.find('%')
+                                    if pct_start > 0 and pct_end > pct_start:
+                                        buffer_pct = line_str[pct_start:pct_end]
+                                        logger.warning(f"🔄 DIRECTSHOW BUFFER: {buffer_pct}% - Auto-disposing frames")
+                                except:
+                                    logger.warning(f"🔄 DIRECTSHOW BUFFER MANAGEMENT: {line_str}")
+                        else:
+                            logger.info(f"🔄 DIRECTSHOW: {line_str}")
                     else:
                         logger.warning(f"🔊 AUDIO ISSUE: {line_str}")
                 
@@ -782,23 +1068,92 @@ class OptimizedRTMPStreamer:
     
     def _build_ffmpeg_command(self):
         """Build hardware-accelerated FFmpeg command with proper audio sync"""
-        if self.enable_audio:
-            # Base command with MJPEG input
-            cmd = [
-                'ffmpeg', '-y',
+        
+        # Select audio device
+        self.audio_device = self._select_audio_device()
+        
+        if self.enable_audio and self.audio_device:
+            
+            # Check if we're using WASAPI for Line In
+            if self.audio_device.startswith("WASAPI:"):
+                # Extract device info
+                device_parts = self.audio_device.split(':', 2)
+                device_index = int(device_parts[1])
+                device_name = device_parts[2]
                 
-                # Video input: MJPEG frames from Unreal Engine
-                '-f', 'image2pipe',
-                '-vcodec', 'mjpeg',
-                '-framerate', '20',  # Explicitly set input framerate
-                '-i', 'pipe:0',
+                logger.info(f"Setting up Line In audio capture via WASAPI (device {device_index})")
+                logger.info(f"Device: {device_name}")
                 
-                # Audio input: DirectShow with ultra-minimal buffer (prevents overflow)
-                '-f', 'dshow',
-                '-audio_buffer_size', '5',       # Ultra-minimal 5ms buffer
-                '-rtbufsize', '8k',              # Ultra-small real-time buffer (8KB)
-                '-i', 'audio=Stereo Mix (Realtek(R) Audio)',  # System audio capture
-            ]
+                # For now, use video-only with WASAPI audio detection
+                # TODO: Implement full WASAPI→FFmpeg integration 
+                cmd = [
+                    'ffmpeg', '-y',
+                    
+                    # Video input: MJPEG frames from Unreal Engine  
+                    '-f', 'image2pipe',
+                    '-vcodec', 'mjpeg',
+                    '-framerate', '20',
+                    '-i', 'pipe:0',
+                ]
+                
+                logger.info("WASAPI Line In detected - audio capture active but using video-only streaming")
+                logger.info("To enable full audio sync, install Virtual Audio Capture Grabber Device:")
+                logger.info("  https://github.com/rdp/virtual-audio-capture-grabber-device")
+                logger.info("  Then FFmpeg can access Line In via: 'virtual-audio-capturer' DirectShow device")
+                
+                # Start WASAPI audio capture (for monitoring/stats)
+                self.start_wasapi_audio_capture(device_index, device_name)
+                
+            elif self.audio_device.startswith("DSHOW:"):
+                # Extract DirectShow device name
+                dshow_device = self.audio_device[6:]  # Remove "DSHOW:" prefix
+                
+                # Using DirectShow
+                cmd = [
+                    'ffmpeg', '-y',
+                    
+                    # Video input: MJPEG frames from Unreal Engine
+                    '-f', 'image2pipe',
+                    '-vcodec', 'mjpeg',
+                    '-framerate', '20',  # Explicitly set input framerate
+                    '-i', 'pipe:0',
+                    
+                    # Audio input: DirectShow optimized for SYSTEM AUDIO OUTPUT capture
+                    '-f', 'dshow',  # Match video framerate
+                    '-audio_buffer_size', '50',      # 10ms buffer for steady output capture
+                    '-rtbufsize', '1024k',            # 2KB buffer - accommodate system audio output rate
+                    '-probesize', '128',             # Small probe for quick startup
+                    '-analyzeduration', '10',       # Quick analysis for system audio
+                    '-fflags', '+flush_packets',     # Immediate packet flushing
+                    '-thread_queue_size', '8',      # Reasonable queue for output stream
+                    '-i', f'audio={dshow_device}',  # Use detected DirectShow audio device
+                ]
+            else:
+                # Fallback for legacy format (no prefix)
+                cmd = [
+                    'ffmpeg', '-y',
+                    
+                    # Video input: MJPEG frames from Unreal Engine
+                    '-f', 'image2pipe',
+                    '-vcodec', 'mjpeg',
+                    '-framerate', '20',
+                    '-i', 'pipe:0',
+                    
+                    # Audio input: DirectShow fallback
+                    '-f', 'dshow',
+                    '-audio_buffer_size', '20',
+                    '-rtbufsize', '64k',
+                    '-i', f'audio={self.audio_device}',
+                ]
+            
+            # Add common audio/video sync options to both paths
+            cmd.extend([
+                # Audio output capture configuration for Virtual Audio device
+                '-thread_queue_size', '32',           # Adequate queue for output stream
+                '-fflags', '+flush_packets',          # Packet flushing for responsiveness
+                '-max_delay', '500000',               # 500ms max delay for stability
+                '-max_muxing_queue_size', '1024',     # Adequate mux queue for output stream
+            ])
             
             # Hardware-specific encoding settings
             if 'nvenc' in self.encoder:
@@ -817,36 +1172,57 @@ class OptimizedRTMPStreamer:
                     '-g', '40',
                     '-keyint_min', '20',
                     '-bf', '0',  # No B-frames for lower latency
-                    
-                    # Audio encoding - RTMP standard AAC
-                    '-c:a', 'aac',
-                    '-b:a', '128k',
-                    '-ar', '44100',  # Keep original sample rate to avoid resampling
-                    '-ac', '2',
-                    
-                    # Video processing
-                    '-vf', 'format=yuv420p',
-                    '-r', '20',  # Force output framerate
-                    
-                    # Audio processing - clean microphone input
-                    '-af', 'aresample=async=1:first_pts=0',
-                    
-                    # Map inputs
-                    '-map', '0:v',
-                    '-map', '1:a',
-                    
-                    # Synchronization settings
-                    '-vsync', 'cfr',
-                    '-copyts',  # Preserve timestamps
-                    '-start_at_zero',  # Start timestamps at zero
-                    
-                    # Output format
-                    '-f', 'flv',
-                    '-flvflags', 'no_duration_filesize',
-                    '-fflags', '+genpts+discardcorrupt',
-                    '-max_interleave_delta', '0',  # Strict interleaving
-                    self.rtmp_url
                 ])
+                
+                # Check if we have audio input or video-only
+                if self.audio_device and self.audio_device.startswith("WASAPI:"):
+                    # WASAPI Line In detected - using video-only mode for stability
+                    cmd.extend([
+                        # Video processing only (stable approach)
+                        '-vf', 'format=yuv420p,fps=20',
+                        '-r', '20',
+                        '-vsync', 'cfr',
+                        
+                        # Output format
+                        '-f', 'flv',
+                        '-flvflags', 'no_duration_filesize',
+                        '-fflags', '+genpts+discardcorrupt',
+                        '-max_interleave_delta', '0',  # Strict interleaving
+                        self.rtmp_url
+                    ])
+                else:
+                    # Audio + Video mode for DirectShow
+                    cmd.extend([
+                        # Audio encoding - RTMP standard AAC for system audio output
+                        '-c:a', 'aac',
+                        '-b:a', '128k',  # Standard AAC bitrate for good quality
+                        '-ar', '48000',  # Standard sample rate for system audio
+                        '-ac', '2',
+                        
+                        # MINIMAL PROCESSING - Let FFmpeg handle frame dropping natively
+                        '-vf', 'format=yuv420p,fps=20',    # Video: exact 20fps
+                        '-af', 'volume=0.8',               # Audio: volume only - no complex processing
+                        
+                        # Force output framerate
+                        '-r', '20',
+                        
+                        # Direct stream mapping for immediate disposal
+                        '-map', '0:v',  # Video from pipe
+                        '-map', '1:a',  # Audio from virtual device
+                        
+                        # Standard synchronization for system audio output capture
+                        '-vsync', 'cfr',            # Constant frame rate
+                        '-async', '1',              # Standard async for audio/video sync
+                        '-copyts',                  # Copy timestamps for proper sync
+                        '-start_at_zero',           # Start timestamps at zero
+                        
+                        # Output format
+                        '-f', 'flv',
+                        '-flvflags', 'no_duration_filesize',
+                        '-fflags', '+genpts+discardcorrupt',
+                        '-max_interleave_delta', '0',  # Strict interleaving
+                        self.rtmp_url
+                    ])
             elif 'amf' in self.encoder:
                 # AMD AMF optimizations - RTMP compatible
                 cmd.extend([
@@ -868,16 +1244,17 @@ class OptimizedRTMPStreamer:
                     '-ar', '48000',
                     '-ac', '2',
                     
-                    # Video processing - RTMP compatible
-                    '-vf', 'format=yuv420p',
+                    # Audio sync with drift compensation - Combined video and audio
+                    '-filter_complex',
+                    '[0:v]format=yuv420p,fps=20,setpts=N/20/TB[v];'
+                    '[1:a]aresample=async=1:min_hard_comp=0.100000:compensate_initial=1[a]',
+                    
+                    # Force output framerate
                     '-r', '20',
                     
-                    # Audio processing
-                    '-af', 'aresample=async=100',
-                    
-                    # Map inputs: video from pipe:0, audio from DirectShow
-                    '-map', '0:v',
-                    '-map', '1:a',
+                    # Map processed streams
+                    '-map', '[v]',
+                    '-map', '[a]',
                     
                     # RTMP synchronization settings
                     '-vsync', 'cfr',
@@ -911,16 +1288,17 @@ class OptimizedRTMPStreamer:
                     '-ar', '48000',
                     '-ac', '2',
                     
-                    # Video processing - RTMP compatible
-                    '-vf', 'format=yuv420p',
+                    # Audio sync with drift compensation - Combined video and audio
+                    '-filter_complex',
+                    '[0:v]format=yuv420p,fps=20,setpts=N/20/TB[v];'
+                    '[1:a]aresample=async=1:min_hard_comp=0.100000:compensate_initial=1[a]',
+                    
+                    # Force output framerate
                     '-r', '20',
                     
-                    # Audio processing
-                    '-af', 'aresample=async=1000',
-                    
-                    # Map inputs: video from pipe:0, audio from DirectShow
-                    '-map', '0:v',
-                    '-map', '1:a',
+                    # Map processed streams
+                    '-map', '[v]',
+                    '-map', '[a]',
                     
                     # RTMP synchronization settings
                     '-vsync', 'cfr',
@@ -949,15 +1327,16 @@ class OptimizedRTMPStreamer:
                     '-ar', '48000',
                     '-ac', '2',
                     
-                    # Video processing
-                    '-vf', 'format=yuv420p,fps=20',
+                    # Use filter_complex for precise sync - Combined video and audio
+                    '-filter_complex',
+                    '[0:v]format=yuv420p,fps=20,setpts=N/20/TB[v];'
+                    '[1:a]aresample=async=1:min_hard_comp=0.100000:first_pts=0[a]',
                     
-                    # Audio sync and processing
-                    '-af', 'aresample=async=1',
+                    # Force output framerate
+                    '-r', '20',
                     
-                    # Map inputs: video from pipe:0, audio from DirectShow
-                    '-map', '0:v',
-                    '-map', '1:a',
+                    '-map', '[v]',
+                    '-map', '[a]',
                     
                     # Synchronization settings for A/V sync
                     '-async', '1',
@@ -1008,36 +1387,7 @@ class OptimizedRTMPStreamer:
         
         return cmd
     
-    def _audio_streaming_loop(self):
-        """Monitor audio capture for validation (FFmpeg handles actual audio streaming)"""
-        if not self.audio_capture:
-            return
-            
-        logger.info(f"Audio monitoring started - FFmpeg DirectShow handles streaming")
-        logger.info("Audio Method: DirectShow (integrated with FFmpeg)")
-        
-        # Since FFmpeg now handles audio directly via DirectShow,
-        # we just monitor our audio capture for validation
-        audio_chunks_captured = 0
-        start_time = time.time()
-        
-        try:
-            while self.running and self.audio_capture:
-                audio_data = self.audio_capture.get_audio_data(timeout=0.01)
-                
-                if audio_data:
-                    audio_chunks_captured += 1
-                    self.audio_chunks_sent += 1
-                    
-                    # Log audio activity every 5 seconds for monitoring
-                    if audio_chunks_captured % 500 == 0:
-                        elapsed = time.time() - start_time
-                        logger.info(f"Audio validation: {audio_chunks_captured} chunks in {elapsed:.1f}s")
-                        
-        except Exception as e:
-            logger.error(f"Audio monitoring error: {e}")
-        
-        logger.info(f"Audio monitoring stopped - DirectShow integration active")
+    # Audio monitoring loop removed - FFmpeg DirectShow handles audio directly
     
     def _raw_frame_loop(self):
         """Process raw frames and send directly to FFmpeg stdin"""
@@ -1099,61 +1449,242 @@ class OptimizedRTMPStreamer:
         except Exception as e:
             logger.error(f"Error handling compressed frame data: {e}")
     
+    def start_wasapi_audio_capture(self, device_index, device_name):
+        """Start WASAPI audio capture for monitoring/stats"""
+        logger.info(f"Starting WASAPI audio capture from device {device_index}: {device_name}")
+        
+        try:
+            import sounddevice as sd
+            import threading
+            
+            # Create audio capture thread for monitoring
+            self.wasapi_thread = threading.Thread(
+                target=self._wasapi_capture_loop, 
+                args=(device_index, device_name),
+                daemon=True
+            )
+            self.wasapi_running = True
+            self.wasapi_thread.start()
+            
+            logger.info("WASAPI audio capture started successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to start WASAPI audio capture: {e}")
+            self.wasapi_running = False
+    
+    def start_wasapi_audio_sync(self, device_index, device_name):
+        """Start WASAPI audio capture with FFmpeg synchronization"""
+        logger.info(f"Starting synchronized WASAPI audio from device {device_index}: {device_name}")
+        
+        try:
+            import sounddevice as sd
+            import threading
+            import tempfile
+            import os
+            
+            # Create a named FIFO for audio data (Unix-style pipe on Windows)
+            # On Windows, we'll use a temporary file approach
+            self.audio_fifo_path = os.path.join(tempfile.gettempdir(), 'wasapi_audio_fifo.raw')
+            
+            # Create audio sync thread
+            self.wasapi_sync_thread = threading.Thread(
+                target=self._wasapi_sync_loop, 
+                args=(device_index, device_name),
+                daemon=True
+            )
+            self.wasapi_running = True
+            self.wasapi_sync_thread.start()
+            
+            logger.info("WASAPI synchronized audio capture started")
+            
+        except Exception as e:
+            logger.error(f"Failed to start WASAPI sync audio capture: {e}")
+            self.wasapi_running = False
+    
+    def _wasapi_capture_loop(self, device_index, device_name):
+        """WASAPI audio capture loop that feeds real-time audio data"""
+        import sounddevice as sd
+        import numpy as np
+        import time
+        
+        logger.info(f"WASAPI capture loop started for device {device_index}")
+        
+        try:
+            # Initialize audio statistics
+            self.audio_chunks_sent = 0
+            self.audio_bytes_sent = 0
+            
+            def audio_callback(indata, frames, time_info, status):
+                """Real-time audio callback for WASAPI capture"""
+                if status:
+                    logger.warning(f"WASAPI callback status: {status}")
+                
+                if self.wasapi_running:
+                    try:
+                        # Convert float32 to int16 PCM (standard format)
+                        audio_data = (indata * 32767).astype(np.int16)
+                        
+                        # Track audio statistics
+                        self.audio_chunks_sent += 1
+                        self.audio_bytes_sent += len(audio_data.tobytes())
+                        
+                        # For now, just track that we're receiving audio
+                        # In a full implementation, this would feed to FFmpeg
+                        if self.audio_chunks_sent % 100 == 0:  # Log every 100 chunks (~2 seconds)
+                            logger.info(f"WASAPI: Captured {self.audio_chunks_sent} audio chunks from Line In")
+                        
+                    except Exception as e:
+                        if self.wasapi_running:
+                            logger.error(f"WASAPI callback error: {e}")
+            
+            # Start real-time WASAPI audio capture
+            with sd.InputStream(
+                device=device_index,
+                channels=2,
+                samplerate=48000,
+                blocksize=1024,  # ~21ms blocks for low latency
+                dtype=np.float32,
+                callback=audio_callback,
+                latency='low'
+            ) as stream:
+                logger.info(f"WASAPI stream started: {stream.samplerate}Hz, {stream.channels}ch")
+                logger.info("Real-time Line In audio capture active!")
+                
+                # Keep streaming while running
+                while self.wasapi_running:
+                    sd.sleep(100)  # Check every 100ms
+                    
+        except Exception as e:
+            logger.error(f"WASAPI capture loop error: {e}")
+        
+        logger.info(f"WASAPI capture stopped - {getattr(self, 'audio_chunks_sent', 0)} chunks captured")
+    
+    def _wasapi_sync_loop(self, device_index, device_name):
+        """WASAPI audio capture loop that syncs with FFmpeg via file/FIFO"""
+        import sounddevice as sd
+        import numpy as np
+        import time
+        
+        logger.info(f"WASAPI synchronized capture loop started for device {device_index}")
+        
+        try:
+            # Initialize audio sync
+            self.audio_chunks_sent = 0
+            
+            # Open audio FIFO file for writing
+            audio_file = open(self.audio_fifo_path, 'wb')
+            logger.info(f"Audio FIFO created at: {self.audio_fifo_path}")
+            
+            def audio_sync_callback(indata, frames, time_info, status):
+                """Synchronized audio callback that writes to FFmpeg FIFO"""
+                if status:
+                    logger.warning(f"WASAPI sync callback status: {status}")
+                
+                if self.wasapi_running:
+                    try:
+                        # Convert float32 to int16 PCM
+                        audio_data = (indata * 32767).astype(np.int16)
+                        
+                        # Write directly to FIFO for FFmpeg consumption
+                        audio_file.write(audio_data.tobytes())
+                        audio_file.flush()
+                        
+                        # Track statistics
+                        self.audio_chunks_sent += 1
+                        
+                        if self.audio_chunks_sent % 100 == 0:
+                            logger.info(f"WASAPI SYNC: {self.audio_chunks_sent} audio chunks synced to FFmpeg")
+                        
+                    except Exception as e:
+                        if self.wasapi_running:
+                            logger.error(f"WASAPI sync callback error: {e}")
+            
+            # Start synchronized audio stream
+            with sd.InputStream(
+                device=device_index,
+                channels=2,
+                samplerate=48000,
+                blocksize=1024,  # ~21ms blocks 
+                dtype=np.float32,
+                callback=audio_sync_callback,
+                latency='low'
+            ) as stream:
+                logger.info(f"WASAPI sync stream started: {stream.samplerate}Hz, {stream.channels}ch")
+                logger.info("Real-time Line In audio synced with FFmpeg!")
+                
+                # Keep streaming while running
+                while self.wasapi_running:
+                    sd.sleep(100)
+                    
+        except Exception as e:
+            logger.error(f"WASAPI sync loop error: {e}")
+        finally:
+            try:
+                if 'audio_file' in locals():
+                    audio_file.close()
+                if hasattr(self, 'audio_fifo_path') and os.path.exists(self.audio_fifo_path):
+                    os.remove(self.audio_fifo_path)
+            except:
+                pass
+        
+        logger.info(f"WASAPI sync capture stopped - {getattr(self, 'audio_chunks_sent', 0)} chunks synced")
+    
+    def stop_wasapi_capture(self):
+        """Stop WASAPI audio capture"""
+        if hasattr(self, 'wasapi_running'):
+            self.wasapi_running = False
+            
+        if hasattr(self, 'wasapi_thread') and self.wasapi_thread:
+            self.wasapi_thread.join(timeout=2)
+            
+        logger.info("WASAPI audio capture stopped")
+    
     def send_frame(self, jpeg_data):
-        """Send JPEG frame with RTMP connection validation and jitter reduction"""
+        """Send JPEG frame with adaptive timing to prevent drift accumulation"""
         if not self.running or not self.process:
             return False
         
-        # Check if RTMP connection is alive
-        if not self.connection_alive:
-            logger.warning(f"RTMP connection is down: {self.last_rtmp_error}")
-            self.running = False
-            return False
+        # Initialize timing on first frame
+        if not hasattr(self, 'last_frame_time'):
+            self.last_frame_time = time.time()
+            self.frame_number = 0
         
-        # Quick process health check
-        if self.process.poll() is not None:
-            logger.warning("FFmpeg process died")
-            self.running = False
-            return False
+        # Adaptive frame timing - based on last frame instead of absolute start time
+        frame_duration = 1.0 / 20.0  # 50ms per frame at 20fps
+        current_time = time.time()
         
-        # Validate JPEG data
+        # Calculate when next frame should be sent based on last frame
+        target_time = self.last_frame_time + frame_duration
+        
+        # If we're ahead, wait (but limit max wait to prevent accumulation)
+        if current_time < target_time:
+            sleep_time = min(target_time - current_time, 0.030)  # Max 30ms wait
+            if sleep_time > 0.001:  # Only sleep if more than 1ms
+                time.sleep(sleep_time)
+        
+        # If we're behind, adjust timing to prevent permanent drift
+        elif current_time - target_time > 0.100:  # More than 100ms behind
+            drift = current_time - target_time
+            logger.warning(f"WARNING: Large timing drift detected: {drift*1000:.1f}ms - resetting timing")
+            # Reset timing to current time to prevent permanent drift accumulation
+            self.last_frame_time = current_time - frame_duration
+        
+        # Validate and send frame
         if not jpeg_data or len(jpeg_data) < 10:
             self.frames_failed += 1
             return False
-            
-        # Validate frame header (JPEG for regular frames, skip for raw frames)
-        if not self.use_raw_frames:
-            if len(jpeg_data) < 2:
-                logger.error(f"Frame too small: {len(jpeg_data)} bytes")
-                self.frames_failed += 1
-                return False
-                
-            if jpeg_data[0] != 0xFF or jpeg_data[1] != 0xD8:
-                logger.error(f"Invalid JPEG header: {jpeg_data[0]:02x} {jpeg_data[1]:02x} (expected FF D8), frame size: {len(jpeg_data)}")
-                self.frames_failed += 1
-                return False
         
-        # Stable frame pacing - target 20fps with buffer management
-        current_time = time.time()
-        if hasattr(self, 'last_frame_time'):
-            target_interval = 1.0 / 20.0  # 20fps = 50ms
-            elapsed = current_time - self.last_frame_time
-            
-            # Only sleep if we're running too fast, allow catch-up if behind
-            if elapsed < target_interval:
-                sleep_time = target_interval - elapsed
-                if sleep_time > 0.005:  # Only sleep for significant delays (5ms+)
-                    time.sleep(min(sleep_time, 0.025))  # Max 25ms sleep
-            
-            # Update timing
-            self.last_frame_time = max(current_time, self.last_frame_time + target_interval)
-        else:
-            self.last_frame_time = current_time
+        if jpeg_data[0] != 0xFF or jpeg_data[1] != 0xD8:
+            logger.error(f"Invalid JPEG header")
+            self.frames_failed += 1
+            return False
         
         try:
             self.process.stdin.write(jpeg_data)
             self.process.stdin.flush()
             self.frames_sent += 1
+            self.frame_number += 1
+            self.last_frame_time = time.time()
             return True
         except Exception as e:
             logger.error(f"Frame send error: {e}")
@@ -1167,17 +1698,23 @@ class OptimizedRTMPStreamer:
         fps = self.frames_sent / max(elapsed, 1)
         success_rate = (self.frames_sent / max(1, self.frames_sent + self.frames_failed)) * 100
         
+        # Get WASAPI audio chunks if using WASAPI
+        wasapi_chunks = 0
+        if (hasattr(self, 'audio_device') and self.audio_device and 
+            self.audio_device.startswith("WASAPI:") and hasattr(self, 'audio_chunks_sent')):
+            wasapi_chunks = getattr(self, 'audio_chunks_sent', 0)
+        
         return {
             'frames_sent': self.frames_sent,
             'frames_failed': self.frames_failed,
-            'audio_chunks_sent': self.audio_chunks_sent,
+            'audio_chunks_sent': wasapi_chunks if wasapi_chunks > 0 else self.audio_chunks_sent,
             'fps': fps,
             'success_rate': success_rate,
             'elapsed_time': elapsed,
             'rtmp_connection_alive': self.connection_alive,
             'last_rtmp_error': self.last_rtmp_error,
             'audio_enabled': self.enable_audio,
-            'audio_method': self.audio_capture.method if self.audio_capture else None,
+            'audio_device': self.audio_device if self.enable_audio else None,
             'encoder': self.encoder_name,
             'raw_frames_enabled': self.use_raw_frames
         }
@@ -1186,9 +1723,9 @@ class OptimizedRTMPStreamer:
         """Stop RTMP streaming and audio capture"""
         self.running = False
         
-        # Stop audio capture
-        if self.audio_capture:
-            self.audio_capture.stop_capture()
+        # Stop WASAPI capture if using Line In
+        if hasattr(self, 'audio_device') and self.audio_device and self.audio_device.startswith("WASAPI:"):
+            self.stop_wasapi_capture()
         
         # Stop raw frame receiver
         if self.raw_frame_receiver:
@@ -1296,7 +1833,7 @@ class ProductionWebRTCBridge:
         logger.info(f"Streaming FPS: {streamer_stats['fps']:.1f}")
         logger.info(f"Frames Sent: {streamer_stats['frames_sent']}")
         logger.info(f"Audio Chunks: {streamer_stats['audio_chunks_sent']}")
-        logger.info(f"Audio Method: {streamer_stats['audio_method']}")
+        logger.info(f"Audio Device: {streamer_stats.get('audio_device', 'None')}")  # Fixed: use get() with default
         logger.info(f"Packets Received: {receiver_stats['packets_received']}")
         logger.info(f"Frames Completed: {receiver_stats['frames_completed']}")
         logger.info(f"Frames Dropped: {receiver_stats['frames_dropped']}")

@@ -1,0 +1,35 @@
+{
+  "current_scene": "Unreal Stream",
+  "current_program_scene": "Unreal Stream",
+  "scene_order": [
+    {
+      "name": "Unreal Stream"
+    }
+  ],
+  "sources": [
+    {
+      "name": "Unreal Stream",
+      "uuid": "scene",
+      "settings": {},
+      "items": [
+        {
+          "name": "Unreal Engine Window",
+          "type": "window_capture",
+          "settings": {
+            "window": "Embody - Unreal Editor",
+            "capture_cursor": true,
+            "compatibility": false,
+            "priority": 1
+          }
+        },
+        {
+          "name": "Desktop Audio",
+          "type": "wasapi_output_capture",
+          "settings": {
+            "device_id": "default"
+          }
+        }
+      ]
+    }
+  ]
+}
