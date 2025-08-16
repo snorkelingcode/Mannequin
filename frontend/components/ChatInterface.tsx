@@ -91,20 +91,38 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
         setIsTyping(false)
         
         // Send AI response to text-to-face receiver via ngrok
-        const textToFaceUrl = 'https://50110072a0bb.ngrok.app/chat_response'
+        // Get current ngrok URL dynamically
+        let textToFaceUrl = null
         try {
-          await fetch(textToFaceUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              text: data.ai_response
-            })
-          })
-          console.log('Sent to text-to-face receiver via ngrok')
+          const ngrokResponse = await fetch('http://localhost:4040/api/tunnels')
+          const tunnels = await ngrokResponse.json()
+          const httpTunnel = tunnels.tunnels.find(tunnel => 
+            tunnel.proto === 'https' && tunnel.config.addr === 'http://localhost:8001'
+          )
+          if (httpTunnel) {
+            textToFaceUrl = `${httpTunnel.public_url}/chat_response`
+          }
         } catch (error) {
-          console.log('Text-to-face receiver not available:', error)
+          console.log('Could not get ngrok URL dynamically, skipping text-to-face')
+        }
+
+        if (textToFaceUrl) {
+          try {
+            await fetch(textToFaceUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                text: data.ai_response
+              })
+            })
+            console.log('Sent to text-to-face receiver via ngrok:', textToFaceUrl)
+          } catch (error) {
+            console.log('Text-to-face receiver not available:', error)
+          }
+        } else {
+          console.log('No ngrok tunnel found for text-to-face')
         }
       }
     })
