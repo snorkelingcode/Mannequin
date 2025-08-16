@@ -25,33 +25,45 @@ start "Frontend" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\Mannequin\fronte
 
 REM Start Text-to-Face Hook (Terminal 3)
 echo 🎭 Starting Text-to-Face Hook...
-start "Text-to-Face Hook" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\Mannequin" && echo Installing dependencies... && pip install -r text_to_face_requirements.txt && echo Starting Text-to-Face Hook... && python text_to_face_receiver.py"
+start "Text-to-Face Hook" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\NeuroBuff\Neurosync\NeuroSync_Player-main" && echo Installing flask-cors if needed... && pip install flask-cors && echo Starting Text-to-Face Hook... && python chat_response_hook.py"
 
 REM Wait a moment for text-to-face to start
 timeout /t 2 /nobreak >nul
 
 REM Start ngrok tunnel for Text-to-Face (Terminal 4)
 echo 🔒 Starting ngrok tunnel for Text-to-Face...
-start "ngrok Tunnel" cmd /k "echo Starting ngrok tunnel on port 8001... && ngrok http 8001"
+start "ngrok HTTP Tunnel" cmd /k "echo Starting ngrok HTTP tunnel on port 8001... && ngrok http 8001"
 
 REM Wait a moment for ngrok to start
+timeout /t 3 /nobreak >nul
+
+REM Start ngrok TCP tunnel for Unreal Engine (Terminal 5)
+echo 🎮 Starting ngrok TCP tunnel for Unreal Engine...
+start "ngrok TCP Tunnel" cmd /k "echo Starting ngrok TCP tunnel for Unreal Engine port 7777... && ngrok tcp --region=us --remote-addr=5.tcp.ngrok.io:28371 7777"
+
+REM Wait a moment for TCP tunnel to start
 timeout /t 3 /nobreak >nul
 
 echo.
 echo ✅ All services starting...
 echo 📡 WebSocket Bridge: http://localhost:8080
 echo 🎭 Text-to-Face Hook: http://localhost:8001
-echo 🔒 ngrok Tunnel: Check ngrok window for your public URL
+echo 🔒 ngrok HTTP Tunnel: Check ngrok HTTP window for your public URL
+echo 🎮 ngrok TCP Tunnel: 5.tcp.ngrok.io:28371 (for Unreal Engine)
 echo 🌐 Frontend: http://localhost:3000 or http://localhost:3001
 echo.
-echo ⚠️  IMPORTANT: After ngrok starts, you need to:
-echo    1. Copy the ngrok URL from the ngrok window (e.g., https://abc123.ngrok.app)
+echo ⚠️  IMPORTANT: After ngrok HTTP starts, you need to:
+echo    1. Copy the ngrok HTTP URL from the ngrok window (e.g., https://abc123.ngrok.app)
 echo    2. Update frontend/.env.local with: NEXT_PUBLIC_TEXT_TO_FACE_URL=YOUR_NGROK_URL/chat_response
 echo    3. Restart the frontend (close and re-run this batch file)
 echo.
-echo Wait 20-25 seconds for all services to start...
+echo 🎮 For Unreal Engine:
+echo    - Your TCP connection is available at: 5.tcp.ngrok.io:28371
+echo    - Configure your Unreal TCP actor to connect to this address
+echo.
+echo Wait 25-30 seconds for all services to start...
 echo Then open your browser to: http://localhost:3000 (or 3001)
 echo.
-echo 🎮 Ready to stream with AI chat and facial animations!
+echo 🎮 Ready to stream with AI chat, facial animations, and Unreal Engine TCP!
 echo Press any key to close this window...
 pause >nul
