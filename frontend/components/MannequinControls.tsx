@@ -411,6 +411,44 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
           </div>
         </div>
       </CollapsibleSection>
+      
+      {/* Facial Expressions */}
+      <CollapsibleSection title="😊 Facial Expressions" defaultOpen={false}>
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-2">
+          {[
+            { label: '😐 Neutral', cmd: 'FACE.Default' },
+            { label: '😊 Happy', cmd: 'FACE.Happy' },
+            { label: '😢 Sad', cmd: 'FACE.Sad' },
+            { label: '😲 Surprised', cmd: 'FACE.Surprised' },
+            { label: '😨 Fearful', cmd: 'FACE.Fearful' },
+            { label: '🤔 Focused', cmd: 'FACE.Focused' },
+            { label: '🤢 Disgusted', cmd: 'FACE.Disgusted' },
+            { label: '😴 Tired', cmd: 'FACE.Tired' },
+            { label: '😤 Annoyed', cmd: 'FACE.Annoyed' },
+            { label: '😕 Confused', cmd: 'FACE.Confused' },
+            { label: '🤨 Curious', cmd: 'FACE.Curious' },
+            { label: '😳 Embarrassed', cmd: 'FACE.Embarrassed' },
+            { label: '😠 Angry', cmd: 'FACE.Angry' },
+            { label: '😑 Bored', cmd: 'FACE.Bored' },
+            { label: '😌 Relaxed', cmd: 'FACE.Relaxed' },
+            { label: '🤨 Suspicious', cmd: 'FACE.Suspicious' },
+            { label: '😤 Proud', cmd: 'FACE.Proud' },
+            { label: '😣 Pained', cmd: 'FACE.Pained' },
+            { label: '😰 Nervous', cmd: 'FACE.Nervous' },
+            { label: '😍 Love', cmd: 'FACE.Love' }
+          ].map(({ label, cmd }) => (
+            <button
+              key={cmd}
+              onClick={() => sendCommand(cmd)}
+              disabled={!isConnected}
+              className="btn-secondary text-xs py-2 px-1"
+              title={label}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </CollapsibleSection>
     </div>
   )
 }
@@ -581,433 +619,10 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
 
   return (
     <div className="space-y-6">
-      {/* Facial Expressions */}
-      <CollapsibleSection title="😊 Facial Expressions" defaultOpen={false}>
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-2">
-          {[
-            { label: '😐 Neutral', cmd: 'FACE.Default' },
-            { label: '😊 Happy', cmd: 'FACE.Happy' },
-            { label: '😢 Sad', cmd: 'FACE.Sad' },
-            { label: '😲 Surprised', cmd: 'FACE.Surprised' },
-            { label: '😨 Fearful', cmd: 'FACE.Fearful' },
-            { label: '🤔 Focused', cmd: 'FACE.Focused' },
-            { label: '🤢 Disgusted', cmd: 'FACE.Disgusted' },
-            { label: '😴 Tired', cmd: 'FACE.Tired' },
-            { label: '😤 Annoyed', cmd: 'FACE.Annoyed' },
-            { label: '😕 Confused', cmd: 'FACE.Confused' },
-            { label: '🤨 Curious', cmd: 'FACE.Curious' },
-            { label: '😳 Embarrassed', cmd: 'FACE.Embarrassed' },
-            { label: '😠 Angry', cmd: 'FACE.Angry' },
-            { label: '😑 Bored', cmd: 'FACE.Bored' },
-            { label: '😌 Relaxed', cmd: 'FACE.Relaxed' },
-            { label: '🤨 Suspicious', cmd: 'FACE.Suspicious' },
-            { label: '😤 Proud', cmd: 'FACE.Proud' },
-            { label: '😣 Pained', cmd: 'FACE.Pained' },
-            { label: '😰 Nervous', cmd: 'FACE.Nervous' },
-            { label: '😍 Love', cmd: 'FACE.Love' }
-          ].map(({ label, cmd }) => (
-            <button
-              key={cmd}
-              onClick={() => sendCommand(cmd)}
-              disabled={!isConnected}
-              className="btn-secondary text-xs py-2 px-1"
-              title={label}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </CollapsibleSection>
-      
-      {/* Animations & Emotes */}
-      <CollapsibleSection title="💃 Animations & Emotes" defaultOpen={false}>
-        <div className="space-y-4">
-          {/* Basic Animations */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Basic Animations</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-2">
-              <button
-                onClick={() => sendCommand('ANIM.Dance')}
-                disabled={!isConnected}
-                className="btn-primary"
-              >
-                💃 Dance
-              </button>
-              <button
-                onClick={() => sendCommand('ANIM.Mannequin')}
-                disabled={!isConnected}
-                className="btn-secondary"
-              >
-                🧍 Mannequin Pose
-              </button>
-              <button
-                onClick={() => sendCommand('startspeaking')}
-                disabled={!isConnected}
-                className="btn-secondary"
-              >
-                🗣️ Start Speaking
-              </button>
-              <button
-                onClick={() => sendCommand('stopspeaking')}
-                disabled={!isConnected}
-                className="btn-secondary"
-              >
-                🤐 Stop Speaking
-              </button>
-            </div>
-          </div>
-          
-          {/* Emotes */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Emotes</h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-2">
-              {[
-                // Basic Actions
-                { label: '👋 Wave', cmd: 'EMOTE.Wave' },
-                { label: '🫡 Salute', cmd: 'EMOTE.Salute' },
-                { label: '🙇 Bow', cmd: 'EMOTE.Bow' },
-                { label: '👍 Thumbs Up', cmd: 'EMOTE.TrumpThumbsUp' },
-                { label: '🤫 Shush', cmd: 'EMOTE.Shushing' },
-                { label: '🙏 Plead', cmd: 'EMOTE.Plead' },
-                { label: '🤔 Ponder', cmd: 'EMOTE.Ponder' },
-                { label: '💰 Show Money', cmd: 'EMOTE.ShowMeTheMoney' },
-                
-                // Communication
-                { label: '🤐 Telling Secret', cmd: 'EMOTE.TellingSecret' },
-                { label: '👂 Can\'t Hear', cmd: 'EMOTE.CantHear' },
-                { label: '🕒 Clock\'s Ticking', cmd: 'EMOTE.ClocksTicking' },
-                { label: '👐 Present Info', cmd: 'EMOTE.PresentInformation' },
-                { label: '🔊 Make Louder', cmd: 'EMOTE.MakeVoiceLouder' },
-                { label: '🚫 Deny Access', cmd: 'EMOTE.DenyAccess' },
-                
-                // Gestures
-                { label: '👋 Come Here (Seductive)', cmd: 'EMOTE.ComeHereSeductive' },
-                { label: '🤙 Come Here (Challenge)', cmd: 'EMOTE.ComeHereChallenge' },
-                { label: '👌 Sizing Big', cmd: 'EMOTE.SizingBig' },
-                { label: '💸 Make It Rain', cmd: 'EMOTE.MakeItRain' },
-                { label: '🔟 Count to 10', cmd: 'EMOTE.Count10' },
-                { label: '✋ Up Yours', cmd: 'EMOTE.UpYours' },
-                
-                // Emotions
-                { label: '😠 Angry', cmd: 'EMOTE.Angry' },
-                { label: '😡 Angry 2', cmd: 'EMOTE.Angry2' },
-                { label: '😤 Annoyed', cmd: 'EMOTE.Annoyed' },
-                { label: '😕 Confused', cmd: 'EMOTE.Confused' },
-                { label: '😰 Nervous', cmd: 'EMOTE.Nervous' },
-                { label: '😩 Despair', cmd: 'EMOTE.Despair' },
-                { label: '🌟 Feeling Alive', cmd: 'EMOTE.FeelingAlive' },
-                { label: '😈 Plotting', cmd: 'EMOTE.Plotting' },
-                { label: '🏆 Score', cmd: 'EMOTE.Score' },
-                { label: '🤢 Smelly', cmd: 'EMOTE.Smelly' },
-                
-                // Actions
-                { label: '🍳 Cooking', cmd: 'EMOTE.YourCookingBro' },
-                { label: '💃 Dance 2', cmd: 'EMOTE.Dance2' },
-                { label: '💃 Grinding', cmd: 'EMOTE.Grinding' },
-                { label: '🚬 Smoking', cmd: 'EMOTE.Smoking' },
-                { label: '⚡ Smite', cmd: 'EMOTE.Smite' },
-                
-                // NSFW Actions
-                { label: '🖕 Middle Finger', cmd: 'EMOTE.MiddleFinger' },
-                { label: '🖕 Middle Finger Joke', cmd: 'EMOTE.MiddleFingerJoke' },
-                { label: '👉 Finger Gun Self', cmd: 'EMOTE.FingerGunSelf' },
-                { label: '👉 Finger Gun Viewer', cmd: 'EMOTE.FingerGunViewer' },
-                { label: '🎮 Jork', cmd: 'EMOTE.Jork' },
-                { label: '🎮 Jorkit', cmd: 'EMOTE.Jorkit' },
-                { label: '✂️📄🖕 Rock Paper Middle', cmd: 'EMOTE.RockPaperMiddle' }
-              ].map(({ label, cmd }) => (
-                <button
-                  key={cmd}
-                  onClick={() => sendCommand(cmd)}
-                  disabled={!isConnected}
-                  className="btn-secondary text-xs py-2"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </CollapsibleSection>
-      
-
-      {/* Morph Targets - All actual hooks.txt morphs */}
-      <CollapsibleSection title="🎭 Morph Targets" defaultOpen={false}>
-        <div className="space-y-6">
-          {/* Head Structure */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Head Structure</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { key: 'headTop', label: 'Head Top' },
-                { key: 'headSides', label: 'Head Sides' },
-                { key: 'headBack', label: 'Head Back' },
-                { key: 'headBackWidth', label: 'Head Back Width' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Neck */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Neck</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { key: 'neckFrontTop', label: 'Neck Front Top' },
-                { key: 'neckFront', label: 'Neck Front' },
-                { key: 'neckSides', label: 'Neck Sides' },
-                { key: 'neckBackHigh', label: 'Neck Back High' },
-                { key: 'neckBackLow', label: 'Neck Back Low' },
-                { key: 'neckDefinition', label: 'Neck Definition' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Ears */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Ears</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { key: 'earWidth', label: 'Ear Width' },
-                { key: 'earPoint', label: 'Ear Point' },
-                { key: 'earlobe', label: 'Earlobe' },
-                { key: 'earSize', label: 'Ear Size' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Forehead/Temples */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Forehead & Temples</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { key: 'foreheadCenter', label: 'Forehead Center' },
-                { key: 'foreheadCurvature', label: 'Forehead Curvature' },
-                { key: 'foreheadSides', label: 'Forehead Sides' },
-                { key: 'temples', label: 'Temples' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Eyebrows */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Eyebrows</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { key: 'eyebrowHeight', label: 'Eyebrow Height' },
-                { key: 'eyebrowWidth', label: 'Eyebrow Width' },
-                { key: 'eyebrowArch', label: 'Eyebrow Arch' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Eyes */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Eyes</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                { key: 'eyeCavity', label: 'Eye Cavity' },
-                { key: 'eyeWidth', label: 'Eye Width' },
-                { key: 'eyeBags', label: 'Eye Bags' },
-                { key: 'eyeHeight', label: 'Eye Height' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Nose */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Nose</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { key: 'noseBase', label: 'Nose Base' },
-                { key: 'noseLength', label: 'Nose Length' },
-                { key: 'noseWidth', label: 'Nose Width' },
-                { key: 'nostril', label: 'Nostril' },
-                { key: 'septum', label: 'Septum' },
-                { key: 'noseCrookedness', label: 'Nose Crookedness' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Cheeks */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Cheeks</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { key: 'cheekBone', label: 'Cheek Bone' },
-                { key: 'cheekTissue', label: 'Cheek Tissue' },
-                { key: 'cheekDefinition', label: 'Cheek Definition' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Lips */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Lips</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { key: 'lipsOuter', label: 'Lips Outer' },
-                { key: 'lipsWidth', label: 'Lips Width' },
-                { key: 'lipsOverlap', label: 'Lips Overlap' },
-                { key: 'lipsCurve', label: 'Lips Curve' },
-                { key: 'lipsDepth', label: 'Lips Depth' },
-                { key: 'lipsUnderlap', label: 'Lips Underlap' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Chin/Jaw */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Chin & Jaw</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { key: 'chinLength', label: 'Chin Length' },
-                { key: 'chinPoint', label: 'Chin Point' },
-                { key: 'chinWidth', label: 'Chin Width' },
-                { key: 'jawLower', label: 'Jaw Lower' },
-                { key: 'jawHigher', label: 'Jaw Higher' }
-              ].map(({ key, label }) => (
-                <SliderControl
-                  key={key}
-                  label={label}
-                  value={morphTargets[key as keyof typeof morphTargets]}
-                  onChange={(value) => handleMorphTargetChange(key, value)}
-                  min={-1}
-                  max={1}
-                  step={0.01}
-                  disabled={!isConnected}
-                  usePercentageStep={true}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Other */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">Other</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SliderControl
-                label="Horns"
-                value={morphTargets.horns}
-                onChange={(value) => handleMorphTargetChange('horns', value)}
-                min={-1}
-                max={1}
-                step={0.01}
-                disabled={!isConnected}
-                usePercentageStep={true}
-              />
-            </div>
-          </div>
-        </div>
-      </CollapsibleSection>
-      
+      {/* All controls moved to PrimaryControls for better organization */}
+      <div className="text-center text-neutral-400 py-8">
+        <p>Main controls are in the panel to the right →</p>
+      </div>
     </div>
   )
 }
