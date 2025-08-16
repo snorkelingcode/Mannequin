@@ -91,22 +91,20 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
         setIsTyping(false)
         
         // Send AI response to text-to-face receiver via ngrok
-        const textToFaceUrl = process.env.NEXT_PUBLIC_TEXT_TO_FACE_URL
-        if (textToFaceUrl) {
-          try {
-            await fetch(textToFaceUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                text: data.ai_response
-              })
+        const textToFaceUrl = process.env.NEXT_PUBLIC_TEXT_TO_FACE_URL || 'https://a127e613717b.ngrok.app/chat_response'
+        try {
+          await fetch(textToFaceUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              text: data.ai_response
             })
-            console.log('Sent to text-to-face receiver via ngrok')
-          } catch (error) {
-            console.log('Text-to-face receiver not available:', error)
-          }
+          })
+          console.log('Sent to text-to-face receiver via ngrok')
+        } catch (error) {
+          console.log('Text-to-face receiver not available:', error)
         }
       }
     })
