@@ -4,9 +4,7 @@ agent:
 endpoints:
   - name: text_to_face_http
     url: http://localhost:8001
-    upstream:
-      url: http://localhost:8001
   - name: unreal_tcp
     url: tcp://5.tcp.ngrok.io:28371
     upstream:
-      url: tcp://localhost:7777
+      url: localhost:7777
