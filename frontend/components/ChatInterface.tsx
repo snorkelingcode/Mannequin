@@ -91,16 +91,13 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
         setIsTyping(false)
         
         // Send AI response to text-to-face receiver via ngrok
-        // Get current ngrok URL dynamically
+        // Get current ngrok URL dynamically through our API
         let textToFaceUrl = null
         try {
-          const ngrokResponse = await fetch('http://localhost:4040/api/tunnels')
-          const tunnels = await ngrokResponse.json()
-          const httpTunnel = tunnels.tunnels.find(tunnel => 
-            tunnel.proto === 'https' && tunnel.config.addr === 'http://localhost:8001'
-          )
-          if (httpTunnel) {
-            textToFaceUrl = `${httpTunnel.public_url}/chat_response`
+          const ngrokResponse = await fetch('/api/ngrok-url')
+          const ngrokData = await ngrokResponse.json()
+          if (ngrokData.status === 'success' && ngrokData.url) {
+            textToFaceUrl = `${ngrokData.url}/chat_response`
           }
         } catch (error) {
           console.log('Could not get ngrok URL dynamically, skipping text-to-face')
