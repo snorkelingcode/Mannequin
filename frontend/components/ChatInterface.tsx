@@ -103,6 +103,11 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
           console.log('Could not get ngrok URL dynamically, skipping text-to-face')
         }
 
+        // Fallback to current ngrok URL if dynamic detection fails
+        if (!textToFaceUrl) {
+          textToFaceUrl = 'https://5936064b6245.ngrok.app/chat_response'
+        }
+
         if (textToFaceUrl) {
           try {
             await fetch(textToFaceUrl, {
