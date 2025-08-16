@@ -78,7 +78,7 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
   
   // Listen for AI responses
   useEffect(() => {
-    const unsubscribe = onMessage((data) => {
+    const unsubscribe = onMessage(async (data) => {
       if (data.type === 'chat_response' && data.ai_response) {
         const aiMessage: ChatMessage = {
           id: Date.now().toString(),
@@ -89,6 +89,25 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
         
         setMessages(prev => [...prev, aiMessage])
         setIsTyping(false)
+        
+        // Send AI response to text-to-face receiver via ngrok
+        const textToFaceUrl = process.env.NEXT_PUBLIC_TEXT_TO_FACE_URL
+        if (textToFaceUrl) {
+          try {
+            await fetch(textToFaceUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                text: data.ai_response
+              })
+            })
+            console.log('Sent to text-to-face receiver via ngrok')
+          } catch (error) {
+            console.log('Text-to-face receiver not available:', error)
+          }
+        }
       }
     })
     
