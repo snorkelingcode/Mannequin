@@ -1008,9 +1008,6 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
   return (
     <div className="space-y-6">
       {/* All controls moved to PrimaryControls for better organization */}
-      <div className="text-center text-neutral-400 py-8">
-        <p>Main controls are in the panel to the right →</p>
-      </div>
     </div>
   )
 }
