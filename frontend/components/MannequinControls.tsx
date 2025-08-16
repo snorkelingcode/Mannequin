@@ -304,8 +304,8 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
   
   return (
     <div className="space-y-6">
-      {/* Camera Presets */}
-      <CollapsibleSection title="📹 Camera Presets" defaultOpen={true}>
+      {/* Camera Presets - Temporarily hidden for unsupported build */}
+      {/* <CollapsibleSection title="📹 Camera Presets" defaultOpen={true}>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-2">
           {[
             { label: 'Default', cmd: 'CAMSHOT.Default' },
@@ -326,13 +326,13 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
             </button>
           ))}
         </div>
-      </CollapsibleSection>
+      </CollapsibleSection> */
       
       {/* Appearance Customization */}
       <CollapsibleSection title="✨ Appearance" defaultOpen={true}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Outfits */}
-          <div>
+          {/* Outfits - Temporarily hidden for unsupported build */}
+          {/* <div>
             <h4 className="text-lg font-semibold text-neutral-100 mb-3">👔 Outfits</h4>
             <div className="grid grid-cols-2 gap-2 mb-2">
               {[
@@ -354,7 +354,7 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
                 </button>
               ))}
             </div>
-          </div>
+          </div> */
           
           {/* Hair Styles */}
           <div>
@@ -780,8 +780,8 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
         </div>
       </CollapsibleSection>
       
-      {/* Bone Sizes */}
-      <CollapsibleSection title="🦴 Bone Sizes" defaultOpen={false}>
+      {/* Bone Sizes - Temporarily hidden for unsupported build */}
+      {/* <CollapsibleSection title="🦴 Bone Sizes" defaultOpen={false}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(boneSizes).map(([bone, value]) => (
             <SliderControl
@@ -797,7 +797,7 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
             />
           ))}
         </div>
-      </CollapsibleSection>
+      </CollapsibleSection> */
 
       {/* Morph Targets - All actual hooks.txt morphs */}
       <CollapsibleSection title="🎭 Morph Targets" defaultOpen={false}>

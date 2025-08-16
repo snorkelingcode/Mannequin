@@ -31,7 +31,10 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
   }
   
   useEffect(() => {
-    scrollToBottom()
+    // Only scroll to bottom if there are messages to avoid initial page scroll
+    if (messages.length > 0) {
+      scrollToBottom()
+    }
   }, [messages])
 
   const sendChatMessage = async () => {
@@ -138,7 +141,7 @@ export function ChatInterface({ websocketUrl, className }: ChatInterfaceProps) {
       <div className="flex items-center justify-between p-3 border-b border-neutral-700 bg-neutral-800">
         <div className="flex items-center space-x-2">
           <ChatBubbleLeftRightIcon className="h-5 w-5 text-purple-400" />
-          <h3 className="text-sm font-semibold text-white">Stream Chat</h3>
+          <h3 className="text-sm font-semibold text-white">Your Chat</h3>
         </div>
       </div>
       
