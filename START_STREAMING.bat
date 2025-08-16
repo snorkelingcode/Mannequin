@@ -37,27 +37,35 @@ start "ngrok Tunnels" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\Mannequin" 
 REM Wait for ngrok tunnels to start
 timeout /t 5 /nobreak >nul
 
+REM Auto-update ngrok URL in .env.local (Terminal 5)
+echo 🔄 Auto-updating ngrok URL in .env.local...
+start "Auto-Update ngrok URL" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\Mannequin" && echo Detecting ngrok URL and updating .env.local... && python update_ngrok_url.py"
+
+REM Wait for URL update
+timeout /t 3 /nobreak >nul
+
 echo.
 echo ✅ All services starting...
 echo 📡 WebSocket Bridge: http://localhost:8080
 echo 🎭 Text-to-Face Hook: http://localhost:8001
-echo 🔒 ngrok Tunnels: Check ngrok window for URLs
-echo    - HTTP tunnel for text-to-face (port 8001)
+echo 🔒 ngrok Tunnels: Both HTTP and TCP tunnels running
+echo    - HTTP tunnel for text-to-face (port 8001) - AUTO-DETECTED
 echo    - TCP tunnel: 5.tcp.ngrok.io:28371 (for Unreal Engine port 7777)
+echo 🔄 Auto-Update: Automatically updating .env.local with ngrok URL
 echo 🌐 Frontend: http://localhost:3000 or http://localhost:3001
 echo.
-echo ⚠️  IMPORTANT: After ngrok starts, you need to:
-echo    1. Check the ngrok window for your HTTP tunnel URL (e.g., https://abc123.ngrok.app)
-echo    2. Update frontend/.env.local with: NEXT_PUBLIC_TEXT_TO_FACE_URL=YOUR_NGROK_URL/chat_response
-echo    3. Restart the frontend (close and re-run this batch file)
+echo ✅ FULLY AUTOMATED: No manual steps required!
+echo    - ngrok URL automatically detected and configured
+echo    - .env.local updated automatically
+echo    - Just wait for all services to start
 echo.
 echo 🎮 For Unreal Engine:
 echo    - Your TCP connection is available at: 5.tcp.ngrok.io:28371
 echo    - Configure your Unreal TCP actor to connect to this address
 echo.
-echo Wait 25-30 seconds for all services to start...
+echo Wait 30-35 seconds for all services to start and auto-configure...
 echo Then open your browser to: http://localhost:3000 (or 3001)
 echo.
-echo 🎮 Ready to stream with AI chat, facial animations, and Unreal Engine TCP!
+echo 🎮 Ready to stream with FULL AUTO-SETUP!
 echo Press any key to close this window...
 pause >nul
