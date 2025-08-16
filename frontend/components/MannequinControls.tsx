@@ -304,81 +304,10 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
   
   return (
     <div className="space-y-6">
-      {/* Camera Presets - Temporarily hidden for unsupported build */}
-      {/* <CollapsibleSection title="📹 Camera Presets" defaultOpen={true}>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-2">
-          {[
-            { label: 'Default', cmd: 'CAMSHOT.Default' },
-            { label: 'Extreme Close', cmd: 'CAMSHOT.ExtremeClose' },
-            { label: 'Close', cmd: 'CAMSHOT.Close' },
-            { label: 'High Angle', cmd: 'CAMSHOT.HighAngle' },
-            { label: 'Low Angle', cmd: 'CAMSHOT.LowAngle' },
-            { label: 'Medium', cmd: 'CAMSHOT.Medium' },
-            { label: 'Wide Shot', cmd: 'CAMSHOT.WideShot' }
-          ].map(({ label, cmd }) => (
-            <button
-              key={cmd}
-              onClick={() => sendCommand(cmd)}
-              disabled={!isConnected}
-              className="btn-secondary text-xs py-2"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </CollapsibleSection> */
       
       {/* Appearance Customization */}
       <CollapsibleSection title="✨ Appearance" defaultOpen={true}>
-        {/* Outfits - Temporarily hidden for unsupported build */}
-        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">👔 Outfits</h4>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              {[
-                { label: 'Default', cmd: 'OF.Default' },
-                { label: 'Maid Dress', cmd: 'OF.MaidDress' },
-                { label: 'Pop Star', cmd: 'OF.PopStar' },
-                { label: 'Kimono', cmd: 'OF.Kimono' },
-                { label: 'Black Dress', cmd: 'OF.BlackDress' },
-                { label: 'Space Suit', cmd: 'OF.SpaceSuit' },
-                { label: 'Anime Armor', cmd: 'OF.ANIME' }
-              ].map(({ label, cmd }) => (
-                <button
-                  key={cmd}
-                  onClick={() => sendCommand(cmd)}
-                  disabled={!isConnected}
-                  className="btn-secondary text-xs py-2"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Hair Styles */}
-          <div>
-            <h4 className="text-lg font-semibold text-neutral-100 mb-3">💇 Hair Styles</h4>
-            <div className="space-y-2">
-              {[
-                { label: 'Default Hair', cmd: 'HS.Default' },
-                { label: 'Buzz Cut', cmd: 'HS.Buzz' },
-                { label: 'Crop Cut', cmd: 'HS.Crop' }
-              ].map(({ label, cmd }) => (
-                <button
-                  key={cmd}
-                  onClick={() => sendCommand(cmd)}
-                  disabled={!isConnected}
-                  className="btn-secondary w-full text-sm"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div> */
-        
-        {/* Hair Styles - Only visible section */}
+        {/* Hair Styles */}
         <div>
           <h4 className="text-lg font-semibold text-neutral-100 mb-3">💇 Hair Styles</h4>
           <div className="space-y-2">
@@ -801,24 +730,6 @@ export function SecondaryControls({ sendCommand, isConnected }: MannequinControl
         </div>
       </CollapsibleSection>
       
-      {/* Bone Sizes - Temporarily hidden for unsupported build */}
-      {/* <CollapsibleSection title="🦴 Bone Sizes" defaultOpen={false}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(boneSizes).map(([bone, value]) => (
-            <SliderControl
-              key={bone}
-              label={bone.charAt(0).toUpperCase() + bone.slice(1)}
-              value={value}
-              onChange={(newValue) => handleBoneSizeChange(bone, newValue)}
-              min={0.1}
-              max={3.0}
-              step={0.01}
-              disabled={!isConnected}
-              usePercentageStep={true}
-            />
-          ))}
-        </div>
-      </CollapsibleSection> */
 
       {/* Morph Targets - All actual hooks.txt morphs */}
       <CollapsibleSection title="🎭 Morph Targets" defaultOpen={false}>
