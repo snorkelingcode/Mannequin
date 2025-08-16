@@ -330,9 +330,9 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
       
       {/* Appearance Customization */}
       <CollapsibleSection title="✨ Appearance" defaultOpen={true}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Outfits - Temporarily hidden for unsupported build */}
-          {/* <div>
+        {/* Outfits - Temporarily hidden for unsupported build */}
+        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
             <h4 className="text-lg font-semibold text-neutral-100 mb-3">👔 Outfits</h4>
             <div className="grid grid-cols-2 gap-2 mb-2">
               {[
@@ -354,7 +354,7 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
                 </button>
               ))}
             </div>
-          </div> */
+          </div>
           
           {/* Hair Styles */}
           <div>
@@ -375,6 +375,27 @@ export function PrimaryControls({ sendCommand, isConnected }: MannequinControlsP
                 </button>
               ))}
             </div>
+          </div>
+        </div> */
+        
+        {/* Hair Styles - Only visible section */}
+        <div>
+          <h4 className="text-lg font-semibold text-neutral-100 mb-3">💇 Hair Styles</h4>
+          <div className="space-y-2">
+            {[
+              { label: 'Default Hair', cmd: 'HS.Default' },
+              { label: 'Buzz Cut', cmd: 'HS.Buzz' },
+              { label: 'Crop Cut', cmd: 'HS.Crop' }
+            ].map(({ label, cmd }) => (
+              <button
+                key={cmd}
+                onClick={() => sendCommand(cmd)}
+                disabled={!isConnected}
+                className="btn-secondary w-full text-sm"
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
         
