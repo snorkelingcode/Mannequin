@@ -30,14 +30,27 @@ start "Text-to-Face Hook" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\NeuroBu
 REM Wait a moment for text-to-face to start
 timeout /t 2 /nobreak >nul
 
+REM Start ngrok tunnel for Text-to-Face (Terminal 4)
+echo 🔒 Starting ngrok tunnel for Text-to-Face...
+start "ngrok Tunnel" cmd /k "echo Starting ngrok tunnel on port 8001... && ngrok http 8001"
+
+REM Wait a moment for ngrok to start
+timeout /t 3 /nobreak >nul
+
 echo.
 echo ✅ All services starting...
 echo 📡 WebSocket Bridge: http://localhost:8080
 echo 🎭 Text-to-Face Hook: http://localhost:8001
+echo 🔒 ngrok Tunnel: Check ngrok window for your public URL
 echo 🌐 Frontend: http://localhost:3000 or http://localhost:3001
 echo.
-echo Wait 15-20 seconds then open your browser to:
-echo http://localhost:3000 (or 3001 if 3000 is busy)
+echo ⚠️  IMPORTANT: After ngrok starts, you need to:
+echo    1. Copy the ngrok URL from the ngrok window (e.g., https://abc123.ngrok.app)
+echo    2. Update frontend/.env.local with: NEXT_PUBLIC_TEXT_TO_FACE_URL=YOUR_NGROK_URL/chat_response
+echo    3. Restart the frontend (close and re-run this batch file)
+echo.
+echo Wait 20-25 seconds for all services to start...
+echo Then open your browser to: http://localhost:3000 (or 3001)
 echo.
 echo 🎮 Ready to stream with AI chat and facial animations!
 echo Press any key to close this window...
