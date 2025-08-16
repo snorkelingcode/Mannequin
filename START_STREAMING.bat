@@ -30,30 +30,24 @@ start "Text-to-Face Hook" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\NeuroBu
 REM Wait a moment for text-to-face to start
 timeout /t 2 /nobreak >nul
 
-REM Start ngrok tunnel for Text-to-Face (Terminal 4)
-echo 🔒 Starting ngrok tunnel for Text-to-Face...
-start "ngrok HTTP Tunnel" cmd /k "echo Starting ngrok HTTP tunnel on port 8001... && ngrok http 8001"
+REM Start ngrok tunnels with config file (Terminal 4)
+echo 🔒 Starting ngrok tunnels (HTTP + TCP)...
+start "ngrok Tunnels" cmd /k "cd /d "C:\Users\danek\OneDrive\Desktop\Mannequin" && echo Starting ngrok with config file... && ngrok start --config ngrok-config.yml --all"
 
-REM Wait a moment for ngrok to start
-timeout /t 3 /nobreak >nul
-
-REM Start ngrok TCP tunnel for Unreal Engine (Terminal 5)
-echo 🎮 Starting ngrok TCP tunnel for Unreal Engine...
-start "ngrok TCP Tunnel" cmd /k "echo Starting ngrok TCP tunnel for Unreal Engine port 7777... && ngrok tcp --region=us --remote-addr=5.tcp.ngrok.io:28371 7777"
-
-REM Wait a moment for TCP tunnel to start
-timeout /t 3 /nobreak >nul
+REM Wait for ngrok tunnels to start
+timeout /t 5 /nobreak >nul
 
 echo.
 echo ✅ All services starting...
 echo 📡 WebSocket Bridge: http://localhost:8080
 echo 🎭 Text-to-Face Hook: http://localhost:8001
-echo 🔒 ngrok HTTP Tunnel: Check ngrok HTTP window for your public URL
-echo 🎮 ngrok TCP Tunnel: 5.tcp.ngrok.io:28371 (for Unreal Engine)
+echo 🔒 ngrok Tunnels: Check ngrok window for URLs
+echo    - HTTP tunnel for text-to-face (port 8001)
+echo    - TCP tunnel: 5.tcp.ngrok.io:28371 (for Unreal Engine port 7777)
 echo 🌐 Frontend: http://localhost:3000 or http://localhost:3001
 echo.
-echo ⚠️  IMPORTANT: After ngrok HTTP starts, you need to:
-echo    1. Copy the ngrok HTTP URL from the ngrok window (e.g., https://abc123.ngrok.app)
+echo ⚠️  IMPORTANT: After ngrok starts, you need to:
+echo    1. Check the ngrok window for your HTTP tunnel URL (e.g., https://abc123.ngrok.app)
 echo    2. Update frontend/.env.local with: NEXT_PUBLIC_TEXT_TO_FACE_URL=YOUR_NGROK_URL/chat_response
 echo    3. Restart the frontend (close and re-run this batch file)
 echo.

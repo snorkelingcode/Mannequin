@@ -1,0 +1,12 @@
+version: 3
+agent:
+  authtoken: 311YOdI57E3GjeVeXksRrHnGIWi_47a4yyozshawo3mFxv45X
+endpoints:
+  - name: text_to_face_http
+    url: http://localhost:8001
+    upstream:
+      url: http://localhost:8001
+  - name: unreal_tcp
+    url: tcp://5.tcp.ngrok.io:28371
+    upstream:
+      url: tcp://localhost:7777
