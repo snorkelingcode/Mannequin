@@ -31,14 +31,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 @dataclass
 class LivepeerConfig:
-    """Livepeer streaming configuration"""
-    api_key: str = "3d0131d4-836b-4d4b-b695-83cab4144f1b"
-    stream_key: str = "7de0-7v24-76co-mvbd"
-    stream_id: str = "7de094b8-3fbe-4b16-ac75-594556d39b18"
-    playback_id: str = "7de0lr18mu0sassl"
-    rtmp_url: str = "rtmp://rtmp.livepeer.com/live"
+    """Livepeer streaming configuration from environment variables"""
+    api_key: str = os.getenv('LIVEPEER_API_KEY', '')
+    stream_key: str = os.getenv('LIVEPEER_STREAM_KEY', '')
+    stream_id: str = os.getenv('LIVEPEER_STREAM_ID', '')
+    playback_id: str = os.getenv('LIVEPEER_PLAYBACK_ID', '')
+    rtmp_url: str = os.getenv('RTMP_INGEST_URL', 'rtmp://rtmp.livepeer.com/live')
 
 class ProductionFrameReceiver:
     """Production-grade UDP frame receiver with bulletproof reliability"""

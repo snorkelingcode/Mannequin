@@ -1,0 +1,18 @@
+# ngrok Configuration Example
+# Copy this file to ngrok-config.yml and fill in your actual values
+# NEVER commit the actual ngrok-config.yml file to version control
+
+version: "2"
+authtoken: ${NGROK_AUTHTOKEN}  # Set this in environment variable
+
+tunnels:
+  websocket:
+    proto: http
+    addr: 8080
+    inspect: false
+    bind_tls: true
+    
+  unreal:
+    proto: tcp
+    addr: 7777
+    remote_addr: 0.tcp.ngrok.io:12345  # Will be assigned dynamically

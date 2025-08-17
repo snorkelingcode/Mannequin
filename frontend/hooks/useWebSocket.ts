@@ -46,32 +46,32 @@ export function useWebSocket(url: string): UseWebSocketReturn {
       
       // Get authentication token
       if (!authTokenRef.current) {
-        console.log('Fetching auth token from /api/auth...')
+        // Authentication in progress
         const response = await fetch('/api/auth', { method: 'POST' })
         if (!response.ok) {
           throw new Error(`Auth failed: ${response.status} ${response.statusText}`)
         }
         const data = await response.json()
-        console.log('Auth response:', data)
+        // Auth response received
         if (!data.token) {
           throw new Error('No token received from auth endpoint')
         }
         authTokenRef.current = data.token
-        console.log('Auth token obtained successfully')
+        // Token obtained
       }
       
-      console.log('Connecting to WebSocket:', url)
+      // Connecting to WebSocket
       const ws = new WebSocket(url)
       wsRef.current = ws
       
       ws.onopen = () => {
-        console.log('WebSocket connected successfully')
+        // WebSocket connected
         setIsConnected(true)
         setConnectionStatus('Connected')
         
         // Authenticate immediately after connection
         if (authTokenRef.current) {
-          console.log('Sending authentication token...')
+          // Sending authentication
           ws.send(JSON.stringify({
             type: 'auth',
             token: authTokenRef.current
@@ -98,7 +98,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
               break
               
             case 'auth_success':
-              console.log('Authentication successful!')
+              // Authentication successful
               setIsAuthenticated(true)
               setConnectionStatus('Authenticated & Ready')
               break
@@ -122,7 +122,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
               break
               
             default:
-              console.log('Unknown message type:', data)
+              // Received unknown message type
           }
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err)
@@ -176,8 +176,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
   }, [])
   
   const sendCommand = useCallback(async (command: string): Promise<boolean> => {
-    console.log('Attempting to send command:', command)
-    console.log('Connection state - Connected:', isConnected, 'Authenticated:', isAuthenticated)
+    // Sending command
     
     if (!wsRef.current || !isConnected || !isAuthenticated) {
       console.error('Cannot send command - not connected or authenticated')
@@ -186,7 +185,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     }
     
     try {
-      console.log('Sending command to WebSocket:', command)
+      // Command being sent
       wsRef.current.send(JSON.stringify({
         type: 'command',
         command: command

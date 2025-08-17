@@ -131,6 +131,16 @@ logs.txt
 *credentials*.txt
 *Credentials*.txt
 
+# Ngrok configuration files
+ngrok.yml
+ngrok.yaml
+ngrok-config.yml
+ngrok-config.yaml
+.ngrok/
+.ngrok2/
+ngrok*.yml
+ngrok*.yaml
+
 # Logs
 logs
 *.log
