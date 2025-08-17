@@ -40,7 +40,7 @@ export function middleware(request: NextRequest) {
     font-src 'self';
     connect-src 'self' ws://localhost:* wss://*.ngrok.app wss://*.railway.app https://livepeercdn.studio;
     media-src 'self' https://livepeercdn.studio;
-    frame-src 'none';
+    frame-src 'self' https://lvpr.tv https://*.livepeer.com https://livepeercdn.studio;
   `.replace(/\s{2,}/g, ' ').trim()
   
   response.headers.set('Content-Security-Policy', cspHeader)
